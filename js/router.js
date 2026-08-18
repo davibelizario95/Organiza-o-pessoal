@@ -63,6 +63,7 @@ async function render() {
     view.scrollTop = 0;
     view.style.transition = "";
     view.style.transform = "";
+    view.style.opacity = "";
   }
   replayViewTransition();
 }

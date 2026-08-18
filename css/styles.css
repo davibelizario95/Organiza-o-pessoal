@@ -108,7 +108,7 @@ button, .btn, .chip, .nav-link, .list-item-check, .habit-day, .task-card, .profi
 }
 
 .pop { animation: check-pop var(--dur-2) var(--ease-spring); }
-#view.view-enter { animation: view-enter var(--dur-3) var(--ease-out); }
+#view.view-enter { animation: view-enter var(--dur-3) var(--ease-out) both; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
