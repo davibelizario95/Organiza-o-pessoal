@@ -40,8 +40,6 @@
   --c-trabalho: #d9705f;
   --c-financeiro: #3fa3a3;
 
-  --nav-w: 236px;
-  --topbar-h: 60px;
   --bottomnav-h: 64px;
 
   /* superfícies opacas — sem vidro/blur, o Caldera é chapado */
@@ -162,32 +160,12 @@ button:focus-visible, .btn:focus-visible, .chip:focus-visible, .nav-link:focus-v
 
 /* ---------------------------------------------------------------- SHELL */
 #app-shell {
-  display: grid;
-  grid-template-columns: var(--nav-w) 1fr;
   min-height: 100vh;
-}
-.sidebar {
-  border-right: 1.5px dotted var(--material-border);
-  background: var(--material-bg);
-  padding: 18px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
 }
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 10px 18px;
-  background: none; border: none; width: 100%; text-align: left; cursor: pointer;
-  border-radius: var(--radius-sm);
-}
-.brand:hover .brand-name { color: var(--accent); }
-.brand:active { transform: scale(0.98); }
+#main-area { display: flex; flex-direction: column; min-height: 100vh; min-width: 0; }
+
 .brand-mark {
   width: 32px; height: 32px; border-radius: var(--radius-xs);
   background: var(--accent);
@@ -200,37 +178,9 @@ button:focus-visible, .btn:focus-visible, .chip:focus-visible, .nav-link:focus-v
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.65; transform: scale(0.94); }
 }
-.brand-name { font-family: var(--font-display); font-weight: 400; font-size: 16px; text-transform: uppercase; letter-spacing: 0.02em; transition: color var(--dur-2) var(--ease-standard); }
 
-.nav-section-label {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-dim);
-  padding: 14px 10px 6px;
-}
-.nav-link {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 14px;
-  border-radius: var(--radius-xs);
-  text-decoration: none;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-}
-.nav-link:hover { background: var(--bg-elev-2); }
-.nav-link:active { transform: scale(0.97); background: var(--bg-elev-2); }
-.nav-link.active { background: var(--accent); color: var(--accent-ink); }
 .nav-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.nav-link .badge-count {
-  margin-left: auto;
+.badge-count {
   font-size: 11px;
   font-weight: 500;
   background: var(--bg-elev-2);
@@ -238,44 +188,16 @@ button:focus-visible, .btn:focus-visible, .chip:focus-visible, .nav-link:focus-v
   padding: 1px 7px;
   color: var(--text-dim);
 }
-.nav-link.active .badge-count { background: rgba(7,6,7,0.14); color: var(--color-obsidian); }
 
-.profile-switcher {
-  margin-top: auto;
-  border-top: 1.5px dotted var(--border-strong);
-  padding-top: 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-}
-.profile-switcher:hover { background: var(--bg-elev-2); }
-.profile-switcher:active { transform: scale(0.98); background: var(--bg-elev-2); }
 .avatar {
   width: 30px; height: 30px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   color: var(--color-chalk); font-weight: 700; font-size: 13px; flex-shrink: 0;
 }
 
-.sidebar-overlay { display: none; }
-#main-area { display: flex; flex-direction: column; min-height: 100vh; min-width: 0; }
-.topbar {
-  height: var(--topbar-h);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 20px;
-  border-bottom: 1.5px dotted var(--material-border);
-  background: var(--material-bg);
-  position: sticky; top: 0; z-index: 20;
-}
-.topbar h1 { font-size: 20px; letter-spacing: 0.02em; transition: opacity 140ms ease; }
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
-.topbar .menu-toggle { display: none; }
-
 main#view {
   flex: 1;
-  padding: 22px;
+  padding: 32px 22px 22px;
   max-width: 1180px;
   width: 100%;
   margin: 0 auto;
@@ -283,21 +205,60 @@ main#view {
 
 .bottom-nav { display: none; }
 
+/* ------------------------------------------------------- HOVER TOP NAV */
+/* "Frentes de vida" (+ Agenda/Ajustes/perfil) viraram uma barra que fica
+   escondida e só desliza pra baixo quando o mouse passa pela faixa
+   superior da tela — sem ocupar espaço lateral fixo. Só em telas com
+   mouse (desktop); no mobile o acesso continua pela bottom-nav. */
+.hovernav-trigger {
+  position: fixed; top: 0; left: 0; right: 0; height: 14px; z-index: 51;
+}
+.hovernav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  display: flex; justify-content: center;
+  padding-top: 14px;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out);
+}
+.hovernav.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.hovernav-pill {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--bg-elev);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  max-width: calc(100vw - 32px);
+}
+.hovernav-brand { background: none; border: none; padding: 0; cursor: pointer; display: flex; flex-shrink: 0; }
+.hovernav-brand:active { transform: scale(0.94); }
+.hovernav-links { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.hovernav-link {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  padding: 8px 14px; border-radius: var(--radius-xs);
+  font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--text);
+  white-space: nowrap;
+}
+.hovernav-link:hover { background: var(--bg-elev-2); }
+.hovernav-link:active { transform: scale(0.96); }
+.hovernav-link.active { background: var(--accent); color: var(--accent-ink); }
+.hovernav-link .badge-count { background: rgba(7,6,7,0.14); color: var(--color-obsidian); }
+.hovernav-divider {
+  width: 0; align-self: stretch; margin: 2px 4px;
+  border-left: 1.5px dotted var(--border-strong);
+}
+.hovernav-avatar {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: 50%; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-chalk); font-weight: 700; font-size: 13px;
+}
+.hovernav-avatar:active { transform: scale(0.92); }
+
 /* --------------------------------------------------------------- MOBILE */
 @media (max-width: 900px) {
-  #app-shell { grid-template-columns: 1fr; }
-  .sidebar {
-    position: fixed; inset: 0 20% 0 0; z-index: 40;
-    transform: translateX(-100%);
-    transition: transform var(--dur-3) var(--ease-spring);
-  }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(7,6,7,0.45); z-index: 39;
-    opacity: 0; transition: opacity var(--dur-2) var(--ease-standard);
-  }
-  .sidebar-overlay.open { display: block; opacity: 1; }
-  .topbar .menu-toggle { display: flex; }
+  .hovernav-trigger, .hovernav { display: none; }
   main#view { padding: 14px 14px 90px; }
   .bottom-nav {
     display: flex;
@@ -667,11 +628,9 @@ input:focus, textarea:focus, select:focus {
 
 /* ------------------------------------------------------------------ HUB */
 /* modo hub: a tela de entrada do perfil ocupa a área toda, sem sidebar/topbar */
-body.hub-mode #app-shell { grid-template-columns: 1fr; }
-body.hub-mode .sidebar,
-body.hub-mode .topbar,
+body.hub-mode .hovernav-trigger,
+body.hub-mode .hovernav,
 body.hub-mode .bottom-nav,
-body.hub-mode .sidebar-overlay,
 body.hub-mode .fab { display: none !important; }
 body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 100vh; }
 

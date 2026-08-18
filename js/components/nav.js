@@ -17,60 +17,67 @@ function pendingCount(frenteKey) {
   return state.items.filter((i) => i.frente === frenteKey && !i.completedAt && i.column !== "done").length;
 }
 
-const TOP_LINKS = [{ key: "dashboard", label: "Início", icon: "dashboard" }];
-const BOTTOM_LINKS = [
-  { key: "agenda", label: "Agenda", icon: "agenda" },
-  { key: "settings", label: "Ajustes", icon: "settings" },
-];
-
-export function renderSidebar() {
+// Barra de navegação do topo: fica oculta e só aparece quando o mouse passa
+// pela faixa superior da tela (ver .hovernav-trigger/.hovernav no CSS).
+// Reúne tudo que antes vivia na barra lateral: Frentes de vida, Agenda,
+// Ajustes e o troca-perfil — a lateral deixou de existir.
+export function renderTopNav() {
   const { path } = currentRoute();
   const active = path.split("/")[0];
 
-  const linkHtml = (l, color) => `
-    <button class="nav-link ${active === l.key ? "active" : ""}" data-nav="${l.key}">
-      ${color ? `<span class="nav-dot" style="background:${color}"></span>` : icon(l.icon)}
-      <span>${l.label}</span>
-      ${l.key !== "dashboard" && l.key !== "agenda" && l.key !== "settings" && pendingCount(l.key) > 0
-        ? `<span class="badge-count">${pendingCount(l.key)}</span>`
-        : ""}
+  const frenteLinkHtml = (f) => `
+    <button class="hovernav-link ${active === f.key ? "active" : ""}" data-nav="${f.key}">
+      <span class="nav-dot" style="background:${f.color}"></span>
+      <span>${f.label}</span>
+      ${pendingCount(f.key) > 0 ? `<span class="badge-count">${pendingCount(f.key)}</span>` : ""}
     </button>`;
 
   const el = document.createElement("div");
   el.innerHTML = `
-    <button class="brand" id="brand-home" title="Voltar ao início">
-      <div class="brand-mark">OP</div>
-      <div class="brand-name">Organização Pessoal</div>
-    </button>
-    ${TOP_LINKS.map((l) => linkHtml(l)).join("")}
-    <div class="nav-section-label">Frentes de vida</div>
-    ${FRENTES.map((f) => linkHtml({ key: f.key, label: f.label, icon: f.icon }, f.color)).join("")}
-    <div class="nav-section-label">Geral</div>
-    ${BOTTOM_LINKS.map((l) => linkHtml(l)).join("")}
-    <div class="profile-switcher" id="profile-switcher">
-      <div class="avatar" style="background-color:${state.profile?.color || "#888"}">${initials(state.profile?.name || "?")}</div>
-      <div>
-        <div style="font-size:13px;font-weight:700;">${state.profile?.name || "Perfil"}</div>
-        <div class="small text-dim">Trocar perfil</div>
+    <div class="hovernav-trigger" id="hovernav-trigger"></div>
+    <nav class="hovernav" id="hovernav">
+      <div class="hovernav-pill">
+        <button class="hovernav-brand" id="hovernav-brand" title="Voltar ao início do perfil">
+          <div class="brand-mark">OP</div>
+        </button>
+        <div class="hovernav-links">
+          <button class="hovernav-link ${active === "hub" ? "active" : ""}" data-nav="hub">All</button>
+          ${FRENTES.map(frenteLinkHtml).join("")}
+          <span class="hovernav-divider"></span>
+          <button class="hovernav-link ${active === "agenda" ? "active" : ""}" data-nav="agenda">Agenda</button>
+          <button class="hovernav-link ${active === "settings" ? "active" : ""}" data-nav="settings">Ajustes</button>
+        </div>
+        <button class="hovernav-avatar avatar" id="hovernav-avatar" title="Trocar perfil" style="background-color:${state.profile?.color || "#888"}">${initials(state.profile?.name || "?")}</button>
       </div>
-    </div>
+    </nav>
   `;
+
+  const trigger = el.querySelector("#hovernav-trigger");
+  const nav = el.querySelector("#hovernav");
+  const open = () => nav.classList.add("open");
+  const close = () => nav.classList.remove("open");
+  trigger.addEventListener("mouseenter", open);
+  nav.addEventListener("mouseenter", open);
+  nav.addEventListener("mouseleave", close);
 
   el.querySelectorAll("[data-nav]").forEach((btn) => {
     btn.addEventListener("click", () => {
       navigate(btn.dataset.nav);
-      closeMobileSidebar();
+      close();
     });
   });
-  el.querySelector("#profile-switcher").addEventListener("click", openProfileMenu);
-  el.querySelector("#brand-home").addEventListener("click", () => {
+  el.querySelector("#hovernav-brand").addEventListener("click", () => {
     navigate("hub");
-    closeMobileSidebar();
+    close();
+  });
+  el.querySelector("#hovernav-avatar").addEventListener("click", () => {
+    openProfileMenu();
+    close();
   });
   return el;
 }
 
-function openProfileMenu() {
+export function openProfileMenu() {
   const { body, close } = openModal({ title: "Perfil" });
   body.innerHTML = `
     <div class="flex items-center gap-8" style="margin-bottom:14px;">
@@ -124,6 +131,13 @@ export function renderBottomNav() {
 function openFrentesSheet() {
   const { body, close } = openModal({ title: "Frentes de vida" });
   body.innerHTML = `<div class="profile-list">
+    <div class="profile-row" data-go="__profile">
+      <div class="avatar" style="background-color:${state.profile?.color || "#888"}">${initials(state.profile?.name || "?")}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;">${state.profile?.name || "Perfil"}</div>
+        <div class="small text-dim">Trocar perfil</div>
+      </div>
+    </div>
     ${FRENTES.map(
       (f) => `<div class="profile-row" data-go="${f.key}">
         <span class="nav-dot" style="background:${f.color};width:12px;height:12px;"></span>
@@ -136,16 +150,8 @@ function openFrentesSheet() {
   body.querySelectorAll("[data-go]").forEach((row) => {
     row.addEventListener("click", () => {
       close();
-      navigate(row.dataset.go);
+      if (row.dataset.go === "__profile") openProfileMenu();
+      else navigate(row.dataset.go);
     });
   });
-}
-
-export function openMobileSidebar() {
-  document.getElementById("sidebar")?.classList.add("open");
-  document.getElementById("sidebar-overlay")?.classList.add("open");
-}
-export function closeMobileSidebar() {
-  document.getElementById("sidebar")?.classList.remove("open");
-  document.getElementById("sidebar-overlay")?.classList.remove("open");
 }
