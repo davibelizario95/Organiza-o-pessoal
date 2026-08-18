@@ -679,16 +679,17 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   background-position: center 20%;
   filter: blur(46px) saturate(115%) brightness(0.5);
 }
-/* camada nítida: a foto de verdade, num painel que preserva as proporções
-   do retrato, com a borda esquerda esmaecendo pro fundo ambiente */
+/* camada nítida: a foto de verdade, centralizada, num painel que preserva
+   as proporções do retrato, com as duas bordas esmaecendo pro fundo ambiente */
 .hub-portrait {
-  position: absolute; top: 0; right: 0; bottom: 0;
-  width: min(46vw, 620px);
+  position: absolute; top: 0; bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: min(52vw, 680px);
   background-image: url('../assets/hub-bg.jpg');
   background-size: cover;
   background-position: center 10%;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 22%);
-  mask-image: linear-gradient(90deg, transparent 0%, black 22%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 16%, black 84%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, black 16%, black 84%, transparent 100%);
 }
 .hub-scrim {
   position: absolute; inset: 0;
@@ -700,6 +701,7 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
 @media (max-width: 780px) {
   .hub-portrait {
     top: 0; left: 0; right: 0; bottom: auto; width: auto; height: 54vh;
+    transform: none;
     background-position: center 14%;
     -webkit-mask-image: linear-gradient(180deg, black 55%, transparent 100%);
     mask-image: linear-gradient(180deg, black 55%, transparent 100%);
