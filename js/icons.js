@@ -30,6 +30,7 @@ const paths = {
   review: '<path d="M4 12a8 8 0 1 1 3 6.2" fill="none" stroke-linecap="round"/><path d="M4 21v-5h5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   qr: '<rect x="4" y="4" width="6" height="6" fill="none"/><rect x="14" y="4" width="6" height="6" fill="none"/><rect x="4" y="14" width="6" height="6" fill="none"/><path d="M14 14h3v3M20 14v3h-3M14 20h6" fill="none"/>',
   user: '<circle cx="12" cy="8" r="4" fill="none"/><path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" fill="none" stroke-linecap="round"/>',
+  camera: '<path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" fill="none" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none"/>',
 };
 
 export function icon(name, cls = "icon") {

@@ -1,5 +1,5 @@
 import { state, isTrustedOnThisDevice, trustProfileOnThisDevice, selectProfile } from "../state.js";
-import { createProfile } from "../store.js";
+import { createProfile, updateProfile } from "../store.js";
 import { randomPin } from "../utils.js";
 import { icon } from "../icons.js";
 import { openModal } from "../components/modal.js";
@@ -17,6 +17,74 @@ function greeting() {
   return "Boa noite";
 }
 
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// Redimensiona a foto escolhida pro tamanho do avatar antes de guardar,
+// pra não estourar o limite de tamanho do localStorage/Firestore.
+function readImageAsDataUrl(file, maxSize = 200) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Animação de "abertura": um círculo cresce a partir do avatar clicado até
+// cobrir a tela inteira, e some assim que o app já estiver montado por baixo.
+let openTransitionEl = null;
+function playOpeningTransition(circleEl, color) {
+  return new Promise((resolve) => {
+    if (prefersReducedMotion() || !circleEl) return resolve();
+    const rect = circleEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.max(
+      Math.hypot(cx, cy),
+      Math.hypot(window.innerWidth - cx, cy),
+      Math.hypot(cx, window.innerHeight - cy),
+      Math.hypot(window.innerWidth - cx, window.innerHeight - cy)
+    );
+    const el = document.createElement("div");
+    el.className = "profile-open-transition";
+    el.style.width = el.style.height = rect.width + "px";
+    el.style.left = cx + "px";
+    el.style.top = cy + "px";
+    el.style.background = color || "var(--accent)";
+    el.style.setProperty("--open-scale", (dist * 2.05) / rect.width);
+    document.body.appendChild(el);
+    openTransitionEl = el;
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("open")));
+    setTimeout(resolve, 380);
+  });
+}
+function dismissOpeningTransition() {
+  const el = openTransitionEl;
+  if (!el) return;
+  openTransitionEl = null;
+  requestAnimationFrame(() => {
+    el.style.transition = "opacity 260ms ease";
+    el.style.opacity = "0";
+    setTimeout(() => el.remove(), 260);
+  });
+}
+
 export function renderProfilePicker() {
   const wrap = document.createElement("div");
   wrap.className = "profile-picker-wrap";
@@ -28,40 +96,63 @@ export function renderProfilePicker() {
         <h1 style="font-size:20px;">Organização Pessoal</h1>
         <p class="text-dim small">Escolha seu perfil para continuar</p>
       </div>
-      <div class="profile-list" id="profile-list"></div>
-      <button class="btn" id="new-profile-btn" style="width:100%;">${icon("plus")} Criar novo perfil</button>
+      <div class="profile-avatars-row" id="profile-avatars"></div>
     </div>
   `;
 
-  const list = wrap.querySelector("#profile-list");
+  const row = wrap.querySelector("#profile-avatars");
   state.profiles.forEach((p, i) => {
-    const row = document.createElement("div");
-    row.className = "profile-row";
-    row.style.setProperty("--row-i", i);
-    row.innerHTML = `
-      <div class="avatar" style="background-color:${p.color || "#888"}">${initials(p.name)}</div>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:14px;">${p.name}</div>
-        <div class="small text-dim">${isTrustedOnThisDevice(p.id) ? "Continuar" : "Confirmar PIN para entrar"}</div>
+    const item = document.createElement("button");
+    item.className = "profile-avatar-item";
+    item.style.setProperty("--row-i", i);
+    const bg = p.photo
+      ? `background-image:url('${p.photo}')`
+      : `background-color:${p.color || "#888"}`;
+    item.innerHTML = `
+      <div class="profile-avatar-circle" style="${bg}">
+        ${p.photo ? "" : initials(p.name)}
+        <label class="avatar-photo-edit" title="Adicionar foto">
+          ${icon("camera")}
+          <input type="file" accept="image/*" />
+        </label>
       </div>
-      ${icon("chevronRight")}
+      <span class="profile-avatar-name">${p.name}</span>
     `;
-    row.addEventListener("click", () => handleSelect(p));
-    list.appendChild(row);
+    const circle = item.querySelector(".profile-avatar-circle");
+    item.addEventListener("click", () => handleSelect(p, circle));
+    const fileInput = item.querySelector("input[type=file]");
+    const editBadge = item.querySelector(".avatar-photo-edit");
+    editBadge.addEventListener("click", (e) => e.stopPropagation());
+    fileInput.addEventListener("click", (e) => e.stopPropagation());
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const dataUrl = await readImageAsDataUrl(file);
+      await updateProfile(p.id, { photo: dataUrl });
+      toast("Foto atualizada!");
+    });
+    row.appendChild(item);
   });
 
-  if (state.profiles.length === 0) {
-    list.innerHTML = `<div class="empty-state">Nenhum perfil ainda. Crie o primeiro abaixo.</div>`;
-  }
-
-  wrap.querySelector("#new-profile-btn").addEventListener("click", openCreateProfile);
+  const addItem = document.createElement("button");
+  addItem.className = "profile-avatar-item";
+  addItem.style.setProperty("--row-i", state.profiles.length);
+  addItem.innerHTML = `
+    <div class="profile-avatar-circle add-circle">${icon("plus")}</div>
+    <span class="profile-avatar-name">Novo perfil</span>
+  `;
+  addItem.addEventListener("click", openCreateProfile);
+  row.appendChild(addItem);
 
   return wrap;
 }
 
-function handleSelect(profile) {
+function handleSelect(profile, circleEl) {
   if (isTrustedOnThisDevice(profile.id)) {
-    selectProfile(profile.id);
+    playOpeningTransition(circleEl, profile.color).then(() => {
+      selectProfile(profile.id);
+      dismissOpeningTransition();
+    });
     return;
   }
   const { body, close } = openModal({ title: `Entrar como ${profile.name}` });
@@ -76,7 +167,10 @@ function handleSelect(profile) {
     if (String(field.value).trim() === String(profile.pin)) {
       trustProfileOnThisDevice(profile.id);
       close();
-      selectProfile(profile.id);
+      playOpeningTransition(circleEl, profile.color).then(() => {
+        selectProfile(profile.id);
+        dismissOpeningTransition();
+      });
     } else {
       toast("PIN incorreto.", "danger");
       field.value = "";

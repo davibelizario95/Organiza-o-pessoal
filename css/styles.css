@@ -557,9 +557,10 @@ input:focus, textarea:focus, select:focus {
 /* -------------------------------------------------------- PROFILE PICKER */
 .profile-picker-wrap {
   min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: linear-gradient(165deg, #2f6fed 0%, #5c80f0 45%, #9fb6f6 100%);
 }
 .profile-picker {
-  max-width: 420px; width: 100%;
+  max-width: 480px; width: 100%; text-align: center;
   animation: profile-picker-in var(--dur-3) var(--ease-out) both;
 }
 @keyframes profile-picker-in {
@@ -567,23 +568,20 @@ input:focus, textarea:focus, select:focus {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .profile-picker .greeting {
-  font-size: 13px; font-weight: 600; color: var(--accent);
+  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.92);
   letter-spacing: 0.01em; margin-bottom: 2px;
   animation: profile-picker-in var(--dur-2) var(--ease-out) both;
 }
+.profile-picker h1 { color: #fff; }
+.profile-picker .text-dim { color: rgba(255,255,255,0.78); }
+.profile-picker .brand-mark { box-shadow: 0 6px 18px -4px rgba(15,30,80,0.35); }
+
+/* lista genérica de linhas clicáveis (reaproveitada em sheets como "Frentes de vida") */
 .profile-list { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
 .profile-row {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--border);
   background: var(--bg-elev); cursor: pointer; box-shadow: var(--shadow-sm);
-  opacity: 0;
-  animation: profile-row-in var(--dur-2) var(--ease-out) both;
-  /* cada linha entra levemente depois da anterior */
-  animation-delay: calc(var(--row-i, 0) * 55ms + 90ms);
-}
-@keyframes profile-row-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 .profile-row:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
 .profile-row:active { transform: scale(0.98); }
@@ -592,6 +590,63 @@ input:focus, textarea:focus, select:focus {
   background-image: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0));
   background-blend-mode: overlay;
 }
+
+/* avatares lado a lado, estilo "quem está assistindo" */
+.profile-avatars-row {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center;
+  gap: 26px; margin: 28px 0 8px;
+}
+.profile-avatar-item {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: none; border: none; padding: 4px; cursor: pointer;
+  opacity: 0;
+  animation: profile-row-in var(--dur-2) var(--ease-out) both;
+  animation-delay: calc(var(--row-i, 0) * 60ms + 100ms);
+}
+@keyframes profile-row-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.profile-avatar-item:hover .profile-avatar-circle { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 24px -6px rgba(10,20,60,0.4); }
+.profile-avatar-item:active .profile-avatar-circle { transform: scale(0.95); }
+.profile-avatar-circle {
+  position: relative;
+  width: 84px; height: 84px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; color: #fff;
+  background-size: cover; background-position: center;
+  border: 3px solid rgba(255,255,255,0.7);
+  box-shadow: 0 6px 16px -4px rgba(10,20,60,0.3);
+  transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-2) var(--ease-standard);
+}
+.profile-avatar-circle.add-circle {
+  background: rgba(255,255,255,0.16);
+  border-style: dashed;
+  font-size: 30px; font-weight: 400;
+}
+.profile-avatar-name { font-size: 13.5px; font-weight: 600; color: #fff; text-shadow: 0 1px 4px rgba(10,20,60,0.25); }
+.avatar-photo-edit {
+  position: absolute; right: -3px; bottom: -3px;
+  width: 27px; height: 27px; border-radius: 50%;
+  background: var(--bg-elev); color: var(--text-dim);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-sm); cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.9);
+}
+.avatar-photo-edit:hover { color: var(--accent); }
+.avatar-photo-edit:active { transform: scale(0.88); }
+.avatar-photo-edit svg { width: 13px; height: 13px; }
+.avatar-photo-edit input { display: none; }
+
+/* transição de "abertura" ao entrar num perfil: um círculo cresce a partir
+   do avatar clicado até cobrir a tela, revelando o app por baixo */
+.profile-open-transition {
+  position: fixed; border-radius: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  z-index: 200; pointer-events: none;
+  transition: transform 380ms var(--ease-out);
+}
+.profile-open-transition.open { transform: translate(-50%, -50%) scale(var(--open-scale, 40)); }
 
 /* --------------------------------------------------------------- AGENDA */
 .agenda-grid {
