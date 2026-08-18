@@ -38,10 +38,10 @@ export function renderSidebar() {
 
   const el = document.createElement("div");
   el.innerHTML = `
-    <div class="brand">
+    <button class="brand" id="brand-home" title="Voltar ao início">
       <div class="brand-mark">OP</div>
       <div class="brand-name">Organização Pessoal</div>
-    </div>
+    </button>
     ${TOP_LINKS.map((l) => linkHtml(l)).join("")}
     <div class="nav-section-label">Frentes de vida</div>
     ${FRENTES.map((f) => linkHtml({ key: f.key, label: f.label, icon: f.icon }, f.color)).join("")}
@@ -63,6 +63,10 @@ export function renderSidebar() {
     });
   });
   el.querySelector("#profile-switcher").addEventListener("click", openProfileMenu);
+  el.querySelector("#brand-home").addEventListener("click", () => {
+    navigate("hub");
+    closeMobileSidebar();
+  });
   return el;
 }
 
@@ -82,7 +86,7 @@ function openProfileMenu() {
   body.querySelector("#switch-profile-btn").onclick = () => {
     close();
     signOutProfile();
-    navigate("dashboard");
+    navigate("hub");
   };
   body.querySelector("#goto-settings-btn").onclick = () => {
     close();

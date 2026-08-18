@@ -172,7 +172,11 @@ button:focus-visible, .btn:focus-visible, .chip:focus-visible, .nav-link:focus-v
   align-items: center;
   gap: 10px;
   padding: 4px 10px 18px;
+  background: none; border: none; width: 100%; text-align: left; cursor: pointer;
+  border-radius: var(--radius-sm);
 }
+.brand:hover .brand-name { color: var(--accent); }
+.brand:active { transform: scale(0.98); }
 .brand-mark {
   width: 32px; height: 32px; border-radius: 9px;
   background: linear-gradient(135deg, var(--accent), #8b89f0);
@@ -186,7 +190,7 @@ button:focus-visible, .btn:focus-visible, .chip:focus-visible, .nav-link:focus-v
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.65; transform: scale(0.94); }
 }
-.brand-name { font-weight: 700; font-size: 15px; }
+.brand-name { font-weight: 700; font-size: 15px; transition: color var(--dur-2) var(--ease-standard); }
 
 .nav-section-label {
   font-size: 11px;
@@ -647,6 +651,131 @@ input:focus, textarea:focus, select:focus {
   transition: transform 380ms var(--ease-out);
 }
 .profile-open-transition.open { transform: translate(-50%, -50%) scale(var(--open-scale, 40)); }
+
+/* ------------------------------------------------------------------ HUB */
+/* modo hub: a tela de entrada do perfil ocupa a área toda, sem sidebar/topbar */
+body.hub-mode #app-shell { grid-template-columns: 1fr; }
+body.hub-mode .sidebar,
+body.hub-mode .topbar,
+body.hub-mode .bottom-nav,
+body.hub-mode .sidebar-overlay,
+body.hub-mode .fab { display: none !important; }
+body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 100vh; }
+
+.hub {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, #171b30, #0b0d1c);
+  overflow: hidden;
+}
+/* camada ambiente: a mesma foto, desfocada e escurecida, cobrindo a tela
+   inteira — dá cor/clima ao fundo sem forçar um recorte apertado no rosto */
+.hub-ambient {
+  position: absolute; inset: -5%;
+  background-image: url('../assets/hub-bg.jpg');
+  background-size: cover;
+  background-position: center 20%;
+  filter: blur(46px) saturate(115%) brightness(0.5);
+}
+/* camada nítida: a foto de verdade, num painel que preserva as proporções
+   do retrato, com a borda esquerda esmaecendo pro fundo ambiente */
+.hub-portrait {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: min(46vw, 620px);
+  background-image: url('../assets/hub-bg.jpg');
+  background-size: cover;
+  background-position: center 10%;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 22%);
+  mask-image: linear-gradient(90deg, transparent 0%, black 22%);
+}
+.hub-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(10,12,24,0.08) 0%,
+    rgba(10,12,24,0.2) 55%,
+    rgba(7,9,20,0.86) 100%);
+}
+@media (max-width: 780px) {
+  .hub-portrait {
+    top: 0; left: 0; right: 0; bottom: auto; width: auto; height: 54vh;
+    background-position: center 14%;
+    -webkit-mask-image: linear-gradient(180deg, black 55%, transparent 100%);
+    mask-image: linear-gradient(180deg, black 55%, transparent 100%);
+  }
+}
+.hub-top {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 12px;
+  padding: max(24px, env(safe-area-inset-top)) 28px 0;
+  animation: hub-top-in var(--dur-3) var(--ease-out) both;
+}
+@keyframes hub-top-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hub-greeting { font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
+.hub-sub { font-size: 12.5px; color: rgba(255,255,255,0.75); }
+
+.hub-frentes {
+  position: relative; z-index: 1;
+  margin-top: auto;
+  display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-end;
+  gap: 14px;
+  padding: 24px 20px max(32px, env(safe-area-inset-bottom));
+}
+.hub-frente-card {
+  display: flex; flex-direction: column; align-items: center; gap: 9px;
+  min-width: 90px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  animation: hub-card-in var(--dur-2) var(--ease-out) both;
+  animation-delay: calc(var(--row-i, 0) * 70ms + 140ms);
+  transition: transform var(--dur-2) var(--ease-spring),
+              background var(--dur-2) var(--ease-standard),
+              border-color var(--dur-2) var(--ease-standard),
+              box-shadow var(--dur-2) var(--ease-standard);
+}
+@keyframes hub-card-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hub-frente-card:hover, .hub-frente-card:focus-visible {
+  transform: translateY(-5px) scale(1.05);
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.3);
+  box-shadow: 0 14px 30px -10px rgba(0,0,0,0.4);
+}
+.hub-frente-card:active { transform: translateY(-1px) scale(0.96); }
+.hub-frente-card .hub-frente-icon { color: var(--card-accent, #fff); display: flex; }
+.hub-frente-card .hub-frente-icon svg { width: 22px; height: 22px; }
+.hub-frente-label { font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em; }
+.hub-frente-card.primary {
+  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, white 10%);
+  box-shadow: 0 10px 24px -8px rgba(94,92,230,0.5);
+}
+.hub-frente-card.primary .hub-frente-icon { color: #fff; }
+.hub-frente-card.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, white 12%);
+  box-shadow: 0 16px 32px -10px rgba(94,92,230,0.6);
+}
+
+@media (max-width: 640px) {
+  .hub-frente-card { min-width: 78px; padding: 13px 14px; border-radius: 17px; }
+  .hub-top { padding: max(20px, env(safe-area-inset-top)) 18px 0; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .hub-frente-card { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(20,22,30,0.55); }
+}
 
 /* --------------------------------------------------------------- AGENDA */
 .agenda-grid {

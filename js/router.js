@@ -21,7 +21,7 @@ export function navigate(path) {
 function parseHash() {
   const raw = location.hash.replace(/^#\/?/, "");
   const [path, query] = raw.split("?");
-  return { path: path || "dashboard", params: new URLSearchParams(query || "") };
+  return { path: path || "hub", params: new URLSearchParams(query || "") };
 }
 
 export function currentRoute() {
@@ -35,6 +35,9 @@ function prefersReducedMotion() {
 async function render() {
   const { path, params } = parseHash();
   const view = document.getElementById("view");
+  // sem #view não há onde renderizar (ex: o perfil acabou de ser trocado e
+  // a casca do app ainda não foi remontada) — não há nada a fazer aqui
+  if (!view) return;
   // saída rápida da página atual antes de trocar o conteúdo — evita o corte
   // seco de uma view sumir e a próxima aparecer no mesmo instante
   if (view && view.childElementCount && !prefersReducedMotion()) {
@@ -51,6 +54,9 @@ async function render() {
     }
     currentUnmount = null;
   }
+  // reconfere: a #view pode ter sumido durante a espera acima (ex: o
+  // usuário trocou de perfil no meio da transição de saída)
+  if (!document.getElementById("view")) return;
   const [base] = path.split("/");
   const handler = routes.get(base) || routes.get(path);
   if (!handler) {
@@ -80,6 +86,10 @@ function replayViewTransition() {
 }
 
 export function startRouter() {
+  // evita escutar hashchange duas vezes quando o app é remontado (ex: ao
+  // trocar de perfil), o que fazia um render "fantasma" tentar atualizar
+  // uma #view que já não existe mais
+  window.removeEventListener("hashchange", render);
   window.addEventListener("hashchange", render);
   render();
 }

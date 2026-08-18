@@ -5,6 +5,7 @@ import { mountQuickCapture } from "./components/quickCapture.js";
 import { startGlobalTicker } from "./components/timer.js";
 import { requestNotificationPermission } from "./components/toast.js";
 import { renderProfilePicker } from "./views/profileSelect.js";
+import { renderHub } from "./views/hub.js";
 import { renderDashboard } from "./views/dashboard.js";
 import { renderFrenteGeneric } from "./views/frenteGeneric.js";
 import { renderTrabalho } from "./views/trabalho.js";
@@ -68,6 +69,7 @@ function refreshChrome() {
 }
 
 function setupRoutes() {
+  registerRoute("hub", renderHub);
   registerRoute("dashboard", renderDashboard);
   FRENTES.filter((f) => f.kind !== "board").forEach((f) =>
     registerRoute(f.key, (ctx) => renderFrenteGeneric(f, ctx))

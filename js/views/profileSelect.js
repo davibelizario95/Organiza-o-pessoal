@@ -1,20 +1,12 @@
 import { state, isTrustedOnThisDevice, trustProfileOnThisDevice, selectProfile } from "../state.js";
 import { createProfile, updateProfile } from "../store.js";
-import { randomPin } from "../utils.js";
+import { randomPin, greeting } from "../utils.js";
 import { icon } from "../icons.js";
 import { openModal } from "../components/modal.js";
 import { toast } from "../components/toast.js";
 
 function initials(name = "") {
   return name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-}
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 5) return "Boa madrugada";
-  if (h < 12) return "Bom dia";
-  if (h < 18) return "Boa tarde";
-  return "Boa noite";
 }
 
 function prefersReducedMotion() {
