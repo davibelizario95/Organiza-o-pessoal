@@ -3,12 +3,13 @@
 // "override" no localStorage deste navegador — todo aparelho que for usar
 // sincronização precisa colar a mesma configuração do Firebase uma vez.
 const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
+  apiKey: "AIzaSyD3YcV6NPyRm33pvDk88dhk_hmEF4EzczI",
+  authDomain: "organizacao-pessoal-4d666.firebaseapp.com",
+  projectId: "organizacao-pessoal-4d666",
+  storageBucket: "organizacao-pessoal-4d666.firebasestorage.app",
+  messagingSenderId: "599402029492",
+  appId: "1:599402029492:web:8605560dcd647ef93a52e1",
+  measurementId: "G-BXV2CDJR63",
 };
 
 const DEFAULT_GOOGLE_CONFIG = {

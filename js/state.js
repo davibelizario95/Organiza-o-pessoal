@@ -83,6 +83,14 @@ function tryConsumeJoinLink(profiles) {
 
 async function seedDefaultProfilesIfEmpty() {
   const seeded = localStorage.getItem("op_seeded");
+  // Se este aparelho já tinha dados só-locais (de antes da sincronização via
+  // Firebase ser ligada) e ainda não foram migrados, migra uma única vez —
+  // sem isso, ligar o Firebase faria o app "esquecer" tudo que já existia.
+  if (store.backendMode === "firebase" && !localStorage.getItem("op_migrated_firebase")) {
+    const migrated = await store.migrateLocalToFirebase();
+    localStorage.setItem("op_migrated_firebase", "1");
+    if (migrated) return;
+  }
   if (seeded) return;
   const existing = await store.listProfiles();
   if (existing.length === 0) {

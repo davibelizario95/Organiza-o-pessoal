@@ -8,6 +8,8 @@ import { uid, nowIso } from "./utils.js";
 const LS_PROFILES = "op_profiles";
 const lsItemsKey = (p) => `op_items_${p}`;
 const lsTemplatesKey = (p) => `op_templates_${p}`;
+const LS_CURRENT = "op_current_profile";
+const LS_TRUSTED = "op_trusted_profiles";
 
 function readLs(key, fallback) {
   try {
@@ -106,6 +108,49 @@ export async function updateProfile(id, patch) {
     writeLs(LS_PROFILES, list);
     notifyLocal(LS_PROFILES);
   }
+}
+
+// Migração única: se este aparelho já tinha perfis/tarefas guardados só em
+// localStorage (de antes de configurar o Firebase) e o Firestore do projeto
+// ainda está vazio, copia tudo pra lá — perfis, itens e templates — e
+// atualiza o perfil atual/confiados deste aparelho pros novos IDs.
+export async function migrateLocalToFirebase() {
+  const localProfiles = readLs(LS_PROFILES, []);
+  if (!localProfiles.length) return false;
+  const fb = await getFirebase();
+  if (!fb) return false;
+  const { collection, addDoc, getDocs } = fb.firestore;
+
+  const existingSnap = await getDocs(collection(fb.db, "profiles"));
+  if (existingSnap.size > 0) return false;
+
+  for (const p of localProfiles) {
+    const { id: oldId, ...profileData } = p;
+    const ref = await addDoc(collection(fb.db, "profiles"), profileData);
+    const newId = ref.id;
+
+    for (const it of readLs(lsItemsKey(oldId), [])) {
+      const { id, ...itemData } = it;
+      await addDoc(collection(fb.db, "profiles", newId, "items"), itemData);
+    }
+    for (const t of readLs(lsTemplatesKey(oldId), [])) {
+      const { id, ...tplData } = t;
+      await addDoc(collection(fb.db, "profiles", newId, "templates"), tplData);
+    }
+
+    if (localStorage.getItem(LS_CURRENT) === oldId) localStorage.setItem(LS_CURRENT, newId);
+    try {
+      const trusted = JSON.parse(localStorage.getItem(LS_TRUSTED) || "[]");
+      const idx = trusted.indexOf(oldId);
+      if (idx >= 0) {
+        trusted[idx] = newId;
+        localStorage.setItem(LS_TRUSTED, JSON.stringify(trusted));
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return true;
 }
 
 function randomColor() {
