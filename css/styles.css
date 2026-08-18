@@ -643,41 +643,56 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   overflow: hidden;
 }
 /* camada ambiente: a mesma foto, desfocada e escurecida, cobrindo a tela
-   inteira — dá cor/clima ao fundo sem forçar um recorte apertado no rosto */
+   inteira — dá cor/clima ao fundo sem forçar um recorte apertado no rosto.
+   Preto-e-branco com contraste, igual ao tratamento do projeto de design. */
 .hub-ambient {
   position: absolute; inset: -5%;
   background-image: url('../assets/hub-bg.jpg');
   background-size: cover;
-  background-position: center 20%;
-  filter: blur(46px) saturate(115%) brightness(0.5);
+  background-position: 72% 18%;
+  filter: grayscale(1) contrast(1.08) blur(46px) saturate(115%) brightness(0.5);
 }
 /* camada nítida: a foto de verdade, centralizada, num painel que preserva
-   as proporções do retrato, com as duas bordas esmaecendo pro fundo ambiente */
+   as proporções do retrato, com as duas bordas esmaecendo pro fundo ambiente.
+   Recorte 16:9 "tight" — foco no músico, à direita do quadro. */
 .hub-portrait {
   position: absolute; top: 0; bottom: 0; left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(1.08);
   width: min(52vw, 680px);
   background-image: url('../assets/hub-bg.jpg');
   background-size: cover;
-  background-position: center 10%;
+  background-position: 72% 18%;
+  filter: grayscale(1) contrast(1.08);
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 16%, black 84%, transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0%, black 16%, black 84%, transparent 100%);
 }
+/* duotone teal → laranja em cima da foto (mix-blend-mode:color preserva a
+   luminosidade do preto-e-branco por baixo, só tinge a cor) */
+.hub-duotone {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  mix-blend-mode: color;
+  opacity: 0.9;
+  background-image: linear-gradient(135deg, #145e66 0%, transparent 48%, #e8752c 100%);
+}
 .hub-scrim {
   position: absolute; inset: 0;
-  background: linear-gradient(180deg,
-    rgba(7,6,7,0.1) 0%,
-    rgba(7,6,7,0.24) 55%,
-    rgba(7,6,7,0.9) 100%);
+  background:
+    radial-gradient(circle at 50% 42%, transparent 30%, rgba(7,6,7,0.32) 100%),
+    linear-gradient(180deg,
+      rgba(7,6,7,0.14) 0%,
+      rgba(7,6,7,0.26) 55%,
+      rgba(7,6,7,0.9) 100%);
 }
 @media (max-width: 780px) {
   .hub-portrait {
     top: 0; left: 0; right: 0; bottom: auto; width: auto; height: 54vh;
-    transform: none;
-    background-position: center 14%;
+    transform: scale(1.04);
+    background-position: 60% 20%;
     -webkit-mask-image: linear-gradient(180deg, black 55%, transparent 100%);
     mask-image: linear-gradient(180deg, black 55%, transparent 100%);
   }
+  .hub-ambient { background-position: 60% 20%; }
 }
 .hub-top {
   position: relative; z-index: 1;

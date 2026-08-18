@@ -20,6 +20,7 @@ export function renderHub() {
     <div class="hub">
       <div class="hub-ambient"></div>
       <div class="hub-portrait"></div>
+      <div class="hub-duotone"></div>
       <div class="hub-scrim"></div>
       <div class="hub-top">
         <div class="brand-mark">OP</div>
