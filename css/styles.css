@@ -480,6 +480,14 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ------------------------------------------------------------- DASHBOARD */
+/* tela some pra preto conforme o usuário rola pra cima já no topo de Geral,
+   até voltar pro Hub (ver mountBackScroll em js/views/dashboard.js) */
+.dashboard-back-fade {
+  position: fixed; inset: 0; z-index: 200;
+  background: var(--color-obsidian);
+  opacity: 0;
+  pointer-events: none;
+}
 .stat-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .stat {
   flex: 1; min-width: 130px;
@@ -720,20 +728,17 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   margin-bottom: 18px;
 }
 .hub-hero-title {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
   text-align: center;
-}
-.hub-hero-word {
   font-family: var(--font-display);
-  font-size: 34px;
+  font-size: 30px;
   line-height: 1;
   color: var(--color-chalk);
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  white-space: nowrap;
+  transition: transform var(--dur-2) var(--ease-standard);
 }
 @media (min-width: 640px) {
-  .hub-hero-word { font-size: 52px; }
+  .hub-hero-title { font-size: 48px; }
 }
 .hub-hero-hint {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -772,24 +777,27 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
 .hub-reveal.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
 
 .hub-quickbar {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
 }
 .hub-quickbar input {
   flex: 1; min-width: 0;
   background: rgba(255,255,255,0.06);
   border: 1.5px solid var(--color-chalk);
   border-radius: var(--radius-xs);
-  padding: 15px 22px;
+  padding: 11px 16px;
   color: var(--color-chalk);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 500;
   outline: none;
 }
 .hub-quickbar input::placeholder { color: rgba(255,255,255,0.55); }
 .hub-quickbar input:focus { border-color: var(--accent); }
 .hub-quickbar-send {
-  width: 48px; height: 48px; flex-shrink: 0;
+  width: 38px; height: 38px; flex-shrink: 0;
   border-radius: 50%; border: none;
   background: var(--accent); color: var(--color-obsidian);
   display: flex; align-items: center; justify-content: center;
@@ -797,7 +805,7 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
 }
 .hub-quickbar-send:hover { filter: brightness(1.06); }
 .hub-quickbar-send:active { transform: scale(0.9); }
-.hub-quickbar-send svg { width: 20px; height: 20px; }
+.hub-quickbar-send svg { width: 16px; height: 16px; }
 
 /* único ponto de entrada pra página Geral — o resto da navegação vive na
    barra do topo (desktop) e na bottom-nav (mobile) */

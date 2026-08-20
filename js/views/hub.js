@@ -16,9 +16,6 @@ export function renderHub() {
   document.body.classList.add("hub-mode");
 
   const titleFull = `${greeting()}, ${state.profile?.name || ""}`.trim();
-  const spaceIdx = titleFull.indexOf(" ");
-  const firstWord = spaceIdx === -1 ? titleFull : titleFull.slice(0, spaceIdx);
-  const restWord = spaceIdx === -1 ? "" : titleFull.slice(spaceIdx + 1);
 
   view.innerHTML = `
     <div class="hub">
@@ -31,10 +28,7 @@ export function renderHub() {
         <div class="hub-hero-media" id="hub-hero-media">
           <span class="hub-hero-sub">Para onde vamos hoje?</span>
         </div>
-        <div class="hub-hero-title">
-          <span class="hub-hero-word" id="hub-hero-word-1">${firstWord}</span>
-          <span class="hub-hero-word" id="hub-hero-word-2">${restWord}</span>
-        </div>
+        <div class="hub-hero-title" id="hub-hero-title">${titleFull}</div>
         <div class="hub-hero-hint" id="hub-hero-hint">
           <span id="hub-hero-hint-text">Role pra expandir</span>
           ${icon("chevronDown")}
@@ -78,8 +72,7 @@ export function renderHub() {
   const ambient = view.querySelector("#hub-ambient");
   const heroEl = view.querySelector("#hub-hero");
   const media = view.querySelector("#hub-hero-media");
-  const word1 = view.querySelector("#hub-hero-word-1");
-  const word2 = view.querySelector("#hub-hero-word-2");
+  const title = view.querySelector("#hub-hero-title");
   const reveal = view.querySelector("#hub-reveal");
   const hintText = view.querySelector("#hub-hero-hint-text");
   const enterFade = view.querySelector("#hub-enter-fade");
@@ -99,9 +92,7 @@ export function renderHub() {
     media.style.width = `${baseW + progress * growW}px`;
     media.style.height = `${baseH + progress * growH}px`;
     media.style.transform = `scale(${1 + enterProgress * 0.08})`;
-    const translate = progress * (isMobile ? 8 : 20);
-    word1.style.transform = `translateX(-${translate}vw)`;
-    word2.style.transform = `translateX(${translate}vw)`;
+    title.style.transform = `scale(${1 + progress * 0.06})`;
     ambient.style.opacity = String(1 - progress);
     enterFade.style.opacity = String(enterProgress);
   }

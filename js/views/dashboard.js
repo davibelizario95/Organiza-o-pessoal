@@ -9,7 +9,11 @@ export function renderDashboard() {
   const view = document.getElementById("view");
   const unsub = subscribe(render);
   render();
-  return unsub;
+  const unmountBackScroll = mountBackScroll();
+  return () => {
+    unsub();
+    unmountBackScroll();
+  };
 
   function render() {
     const items = state.items;
@@ -129,4 +133,69 @@ export function renderDashboard() {
     else dates.add(today);
     await editItem(id, { habitDoneDates: [...dates] });
   }
+}
+
+// Rolar pra cima já no topo da página Geral volta pro Hub — o mesmo gesto
+// de scroll usado lá pra entrar, só que ao contrário.
+function mountBackScroll() {
+  const fade = document.createElement("div");
+  fade.className = "dashboard-back-fade";
+  document.body.appendChild(fade);
+
+  let backProgress = 0;
+  let leaving = false;
+  let touchStartY = 0;
+
+  function setBackProgress(p) {
+    backProgress = Math.min(1, Math.max(0, p));
+    fade.style.opacity = String(backProgress);
+    if (backProgress >= 1 && !leaving) {
+      leaving = true;
+      navigate("hub");
+    }
+  }
+
+  function onWheel(e) {
+    if (leaving) return;
+    if (window.scrollY <= 0 && e.deltaY < 0) {
+      e.preventDefault();
+      setBackProgress(backProgress - e.deltaY * 0.0015);
+      return;
+    }
+    if (backProgress > 0) setBackProgress(0);
+  }
+
+  function onTouchStart(e) {
+    touchStartY = e.touches[0].clientY;
+  }
+  function onTouchMove(e) {
+    if (!touchStartY || leaving) return;
+    const y = e.touches[0].clientY;
+    const deltaY = touchStartY - y;
+    if (window.scrollY <= 0 && deltaY < -15) {
+      e.preventDefault();
+      setBackProgress(backProgress - deltaY * 0.006);
+      touchStartY = y;
+      return;
+    }
+    if (backProgress > 0 && deltaY > 5) setBackProgress(0);
+  }
+  function onTouchEnd() {
+    touchStartY = 0;
+  }
+
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
+  }
+
+  return () => {
+    window.removeEventListener("wheel", onWheel);
+    window.removeEventListener("touchstart", onTouchStart);
+    window.removeEventListener("touchmove", onTouchMove);
+    window.removeEventListener("touchend", onTouchEnd);
+    fade.remove();
+  };
 }
