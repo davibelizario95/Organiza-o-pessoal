@@ -36,7 +36,7 @@ export function renderHub() {
           <span class="hub-hero-word" id="hub-hero-word-2">${restWord}</span>
         </div>
         <div class="hub-hero-hint" id="hub-hero-hint">
-          <span>Role pra expandir</span>
+          <span id="hub-hero-hint-text">Role pra expandir</span>
           ${icon("chevronDown")}
         </div>
       </div>
@@ -51,6 +51,8 @@ export function renderHub() {
           <button class="btn btn-primary hub-enter-btn" id="hub-enter-btn">Entrar</button>
         </div>
       </div>
+
+      <div class="hub-enter-fade" id="hub-enter-fade"></div>
     </div>
   `;
 
@@ -79,9 +81,13 @@ export function renderHub() {
   const word1 = view.querySelector("#hub-hero-word-1");
   const word2 = view.querySelector("#hub-hero-word-2");
   const reveal = view.querySelector("#hub-reveal");
+  const hintText = view.querySelector("#hub-hero-hint-text");
+  const enterFade = view.querySelector("#hub-enter-fade");
 
   let progress = 0;
+  let enterProgress = 0;
   let expanded = false;
+  let entering = false;
   let isMobile = window.innerWidth < 768;
   let touchStartY = 0;
 
@@ -92,10 +98,12 @@ export function renderHub() {
     const growH = isMobile ? 260 : 420;
     media.style.width = `${baseW + progress * growW}px`;
     media.style.height = `${baseH + progress * growH}px`;
+    media.style.transform = `scale(${1 + enterProgress * 0.08})`;
     const translate = progress * (isMobile ? 8 : 20);
     word1.style.transform = `translateX(-${translate}vw)`;
     word2.style.transform = `translateX(${translate}vw)`;
     ambient.style.opacity = String(1 - progress);
+    enterFade.style.opacity = String(enterProgress);
   }
 
   function setProgress(p) {
@@ -105,13 +113,31 @@ export function renderHub() {
       expanded = true;
       heroEl.classList.add("expanded");
       reveal.classList.add("visible");
+      if (hintText) hintText.textContent = "Role pra entrar";
     }
+  }
+
+  // Continuar rolando pra baixo depois de expandido entra direto em Geral —
+  // mesmo gesto de scroll, sem precisar clicar em "Entrar".
+  function setEnterProgress(p) {
+    enterProgress = Math.min(1, Math.max(0, p));
+    applyProgress();
+    if (enterProgress >= 1) enterDashboard();
+  }
+
+  function enterDashboard() {
+    if (entering) return;
+    entering = true;
+    navigate("dashboard");
   }
 
   function collapse() {
     expanded = false;
+    enterProgress = 0;
     heroEl.classList.remove("expanded");
     reveal.classList.remove("visible");
+    if (hintText) hintText.textContent = "Role pra expandir";
+    applyProgress();
   }
 
   function prefersReducedMotion() {
@@ -119,35 +145,45 @@ export function renderHub() {
   }
 
   function onWheel(e) {
-    if (expanded && e.deltaY < 0) {
-      collapse();
+    if (entering) return;
+    if (expanded) {
+      if (e.deltaY < 0) {
+        collapse();
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
+      setEnterProgress(enterProgress + e.deltaY * 0.0015);
       return;
     }
-    if (!expanded) {
-      e.preventDefault();
-      setProgress(progress + e.deltaY * 0.0012);
-    }
+    e.preventDefault();
+    setProgress(progress + e.deltaY * 0.0012);
   }
 
   function onTouchStart(e) {
     touchStartY = e.touches[0].clientY;
   }
   function onTouchMove(e) {
-    if (!touchStartY) return;
+    if (!touchStartY || entering) return;
     const y = e.touches[0].clientY;
     const deltaY = touchStartY - y;
-    if (expanded && deltaY < -20) {
-      collapse();
-      e.preventDefault();
-      touchStartY = y;
+    if (expanded) {
+      if (deltaY < -20) {
+        collapse();
+        e.preventDefault();
+        touchStartY = y;
+        return;
+      }
+      if (deltaY > 0) {
+        e.preventDefault();
+        setEnterProgress(enterProgress + deltaY * 0.009);
+        touchStartY = y;
+      }
       return;
     }
-    if (!expanded) {
-      e.preventDefault();
-      setProgress(progress + deltaY * 0.006);
-      touchStartY = y;
-    }
+    e.preventDefault();
+    setProgress(progress + deltaY * 0.006);
+    touchStartY = y;
   }
   function onTouchEnd() {
     touchStartY = 0;
@@ -157,12 +193,14 @@ export function renderHub() {
     applyProgress();
   }
   function onHintClick() {
-    setProgress(1);
+    if (!expanded) setProgress(1);
+    else setEnterProgress(1);
   }
 
   applyProgress();
   if (prefersReducedMotion()) {
-    // sem animação: já entrega a mídia expandida e o conteúdo visível
+    // sem animação: já entrega a mídia expandida e o conteúdo visível,
+    // mas não entra sozinho em Geral — precisa do clique em "Entrar"
     setProgress(1);
   } else {
     window.addEventListener("wheel", onWheel, { passive: false });

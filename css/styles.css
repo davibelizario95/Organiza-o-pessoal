@@ -749,7 +749,15 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(5px); }
 }
-.hub-hero.expanded .hub-hero-hint { opacity: 0; max-height: 0; pointer-events: none; }
+
+/* tela some pra preto conforme o usuário continua rolando já expandido,
+   até entrar de fato em Geral */
+.hub-enter-fade {
+  position: absolute; inset: 0; z-index: 2;
+  background: var(--color-obsidian);
+  opacity: 0;
+  pointer-events: none;
+}
 
 /* caixa de captura rápida + botão Entrar — revelados quando a mídia expande */
 .hub-reveal {
