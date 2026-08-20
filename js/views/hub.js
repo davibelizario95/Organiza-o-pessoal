@@ -83,6 +83,7 @@ export function renderHub() {
   let entering = false;
   let isMobile = window.innerWidth < 768;
   let touchStartY = 0;
+  let snapTimer = null;
 
   function applyProgress() {
     const baseW = isMobile ? 220 : 320;
@@ -128,7 +129,38 @@ export function renderHub() {
     heroEl.classList.remove("expanded");
     reveal.classList.remove("visible");
     if (hintText) hintText.textContent = "Role pra expandir";
-    applyProgress();
+    // volta a mídia pro tamanho inicial de uma vez, em vez de deixar
+    // presa em tamanho grande até o usuário continuar rolando
+    withSnapTransition(() => setProgress(0));
+  }
+
+  // Encaixe: se o usuário parar de rolar no meio do caminho, termina a
+  // transição sozinho — pra frente se passou da metade, de volta se não —
+  // em vez de deixar a tela "presa" entre um estágio e outro.
+  function withSnapTransition(fn) {
+    media.classList.add("snap");
+    ambient.classList.add("snap");
+    enterFade.classList.add("snap");
+    fn();
+    setTimeout(() => {
+      media.classList.remove("snap");
+      ambient.classList.remove("snap");
+      enterFade.classList.remove("snap");
+    }, 340);
+  }
+
+  function settle() {
+    if (entering) return;
+    if (!expanded && progress > 0 && progress < 1) {
+      withSnapTransition(() => setProgress(progress >= 0.5 ? 1 : 0));
+    } else if (expanded && enterProgress > 0 && enterProgress < 1) {
+      withSnapTransition(() => setEnterProgress(enterProgress >= 0.5 ? 1 : 0));
+    }
+  }
+
+  function scheduleSnap() {
+    clearTimeout(snapTimer);
+    snapTimer = setTimeout(settle, 150);
   }
 
   function prefersReducedMotion() {
@@ -145,14 +177,17 @@ export function renderHub() {
       }
       e.preventDefault();
       setEnterProgress(enterProgress + e.deltaY * 0.0015);
+      scheduleSnap();
       return;
     }
     e.preventDefault();
     setProgress(progress + e.deltaY * 0.0012);
+    scheduleSnap();
   }
 
   function onTouchStart(e) {
     touchStartY = e.touches[0].clientY;
+    clearTimeout(snapTimer);
   }
   function onTouchMove(e) {
     if (!touchStartY || entering) return;
@@ -178,6 +213,7 @@ export function renderHub() {
   }
   function onTouchEnd() {
     touchStartY = 0;
+    settle();
   }
   function onResize() {
     isMobile = window.innerWidth < 768;

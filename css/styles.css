@@ -258,7 +258,18 @@ main#view {
 
 /* --------------------------------------------------------------- MOBILE */
 @media (max-width: 900px) {
-  .hovernav-trigger, .hovernav { display: none; }
+  /* sem mouse não tem hover — a barra de frentes fica sempre visível,
+     grudada no topo (sticky) em vez de aparecer só passando o mouse */
+  .hovernav-trigger { display: none; }
+  .hovernav {
+    position: sticky; top: 0; z-index: 40;
+    opacity: 1; transform: none; pointer-events: auto;
+    padding: 10px 8px 8px;
+    background: var(--bg);
+  }
+  .hovernav-pill { max-width: 100%; padding: 6px 8px; gap: 10px; }
+  .hovernav-links { gap: 0; }
+  .hovernav-link { padding: 7px 10px; font-size: 13px; }
   main#view { padding: 14px 14px 90px; }
   .bottom-nav {
     display: flex;
@@ -488,6 +499,7 @@ input:focus, textarea:focus, select:focus {
   opacity: 0;
   pointer-events: none;
 }
+.dashboard-back-fade.snap { transition: opacity 320ms var(--ease-out); }
 .stat-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .stat {
   flex: 1; min-width: 130px;
@@ -660,6 +672,9 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   background-position: 72% 18%;
   filter: grayscale(1) contrast(1.08) blur(46px) saturate(115%) brightness(0.5);
 }
+/* transição de "encaixe": só ativa por um instante quando o usuário solta o
+   scroll no meio do caminho, pra não travar responsividade durante o arrasto */
+.hub-ambient.snap { transition: opacity 320ms var(--ease-out); }
 @media (max-width: 780px) {
   .hub-ambient { background-position: 60% 20%; }
 }
@@ -719,6 +734,7 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   filter: grayscale(1) contrast(1.08);
   box-shadow: 0 0 0 1.5px rgba(255,255,255,0.14);
 }
+.hub-hero-media.snap { transition: width 320ms var(--ease-out), height 320ms var(--ease-out), transform 320ms var(--ease-out); }
 @media (max-width: 780px) {
   .hub-hero-media { background-position: 60% 20%; }
 }
@@ -763,6 +779,7 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   opacity: 0;
   pointer-events: none;
 }
+.hub-enter-fade.snap { transition: opacity 320ms var(--ease-out); }
 
 /* caixa de captura rápida + botão Entrar — revelados quando a mídia expande */
 .hub-reveal {

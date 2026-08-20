@@ -1,8 +1,10 @@
 // Interpreta comandos de texto livre da caixa rápida do Hub, no formato:
-//   Frente: título, horário dia, coluna
-// Exemplo: "Trabalho: Montar arranjo, 10h00 quinta feira, A Fazer"
-// Horário e coluna são opcionais — sem horário, o item cai direto em "A Fazer".
-import { FRENTES } from "./frentes.js";
+//   Frente: título, horário dia, coluna, contexto, tag
+// Exemplo: "Trabalho: Editar Online, 10h00, a fazer, IC, Online"
+// Todos os pedaços depois do título são opcionais e podem vir em qualquer
+// ordem — sem horário/coluna, o item cai direto em "A Fazer"; contexto
+// (IC/DB/PP) e qualquer outra palavra viram tags pra filtrar depois.
+import { FRENTES, CONTEXTS } from "./frentes.js";
 
 const WEEKDAYS = {
   domingo: 0,
@@ -30,6 +32,12 @@ function matchColumn(text) {
   if (n.includes("conclu")) return "done";
   if (n.includes("ideia") || n.includes("inbox")) return "inbox";
   return null;
+}
+
+function matchContext(text) {
+  const n = normalize(text);
+  const found = CONTEXTS.find((c) => normalize(c.key) === n || normalize(c.label) === n);
+  return found ? found.key : null;
 }
 
 function nextWeekday(from, targetDow) {
@@ -108,6 +116,8 @@ export function parseQuickCommand(raw) {
 
   let column = "todo"; // padrão pedido: sem horário/coluna, cai direto em "A Fazer"
   let schedule = null;
+  let context = null;
+  const tags = [];
   for (const part of parts) {
     const col = matchColumn(part);
     if (col) {
@@ -115,7 +125,16 @@ export function parseQuickCommand(raw) {
       continue;
     }
     const sched = parseSchedule(part);
-    if (sched) schedule = sched;
+    if (sched) {
+      schedule = sched;
+      continue;
+    }
+    const ctx = matchContext(part);
+    if (ctx) {
+      context = ctx;
+      continue;
+    }
+    tags.push(part);
   }
 
   const data = {
@@ -129,6 +148,8 @@ export function parseQuickCommand(raw) {
     data.allDay = !schedule.hasTime;
     data.start = toLocalDateTimeString(schedule.date);
   }
+  if (context) data.context = context;
+  if (tags.length) data.tags = tags;
 
   return { data, frente };
 }

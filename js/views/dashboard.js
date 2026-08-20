@@ -29,7 +29,7 @@ export function renderDashboard() {
     const doing = items.filter((i) => i.frente === "trabalho" && i.column === "doing");
     const blocked = items.filter((i) => i.frente === "trabalho" && i.column === "blocked");
 
-    const pendingByFrente = FRENTES.filter((f) => f.kind !== "board").map((f) => ({
+    const pendingByFrente = FRENTES.map((f) => ({
       frente: f,
       items: items.filter((i) => i.frente === f.key && !i.habit && i.column !== "done" && !i.completedAt),
     }));
@@ -145,6 +145,7 @@ function mountBackScroll() {
   let backProgress = 0;
   let leaving = false;
   let touchStartY = 0;
+  let snapTimer = null;
 
   function setBackProgress(p) {
     backProgress = Math.min(1, Math.max(0, p));
@@ -155,18 +156,38 @@ function mountBackScroll() {
     }
   }
 
+  // Encaixe: se soltar no meio do caminho, termina sozinho — completa a
+  // volta pro Hub se passou da metade, ou desfaz o escurecido se não.
+  function withSnapTransition(fn) {
+    fade.classList.add("snap");
+    fn();
+    setTimeout(() => fade.classList.remove("snap"), 340);
+  }
+  function settle() {
+    if (leaving) return;
+    if (backProgress > 0 && backProgress < 1) {
+      withSnapTransition(() => setBackProgress(backProgress >= 0.5 ? 1 : 0));
+    }
+  }
+  function scheduleSnap() {
+    clearTimeout(snapTimer);
+    snapTimer = setTimeout(settle, 150);
+  }
+
   function onWheel(e) {
     if (leaving) return;
     if (window.scrollY <= 0 && e.deltaY < 0) {
       e.preventDefault();
       setBackProgress(backProgress - e.deltaY * 0.0015);
+      scheduleSnap();
       return;
     }
-    if (backProgress > 0) setBackProgress(0);
+    if (backProgress > 0) withSnapTransition(() => setBackProgress(0));
   }
 
   function onTouchStart(e) {
     touchStartY = e.touches[0].clientY;
+    clearTimeout(snapTimer);
   }
   function onTouchMove(e) {
     if (!touchStartY || leaving) return;
@@ -178,10 +199,11 @@ function mountBackScroll() {
       touchStartY = y;
       return;
     }
-    if (backProgress > 0 && deltaY > 5) setBackProgress(0);
+    if (backProgress > 0 && deltaY > 5) withSnapTransition(() => setBackProgress(0));
   }
   function onTouchEnd() {
     touchStartY = 0;
+    settle();
   }
 
   if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {

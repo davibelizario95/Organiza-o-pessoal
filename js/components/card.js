@@ -22,6 +22,7 @@ export function renderTaskCard(item, { onDragStart } = {}) {
     <div class="task-card-title">${escapeHtml(item.title)}</div>
     <div class="task-card-meta">
       ${item.context ? `<span class="tag tag-${item.context.toLowerCase()}">${item.context}</span>` : ""}
+      ${(item.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
       ${item.urgent ? `<span class="tag tag-urgent">Urgente</span>` : ""}
       ${item.important ? `<span class="tag tag-important">Importante</span>` : ""}
       ${item.voiceNotes?.length ? `<span class="tag">${icon("mic", "icon")} ${item.voiceNotes.length}</span>` : ""}
@@ -89,6 +90,8 @@ export function openTaskDetail(itemId) {
         </select>
       </div>
     </div>
+    <label>Tags (separadas por vírgula — pra filtrar dentro de cada contexto)</label>
+    <input type="text" id="d-tags" placeholder="Ex: Online, Especial" value="${escapeHtml((item.tags || []).join(", "))}" />
     <label>Matriz de prioridade (Eisenhower)</label>
     <div class="flex gap-8">
       <label class="checkbox-row" style="margin:0;"><input type="checkbox" id="d-urgent" ${item.urgent ? "checked" : ""}/> Urgente</label>
@@ -250,6 +253,11 @@ export function openTaskDetail(itemId) {
     if (item.frente === "trabalho") {
       patch.column = body.querySelector("#d-column").value;
       patch.context = body.querySelector("#d-context").value || null;
+      patch.tags = body
+        .querySelector("#d-tags")
+        .value.split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
       patch.urgent = body.querySelector("#d-urgent").checked;
       patch.important = body.querySelector("#d-important").checked;
       const t = body.querySelector("#d-target").value;
