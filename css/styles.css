@@ -707,54 +707,56 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
 .hub-greeting { font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--color-chalk); }
 .hub-sub { font-family: var(--font-body); font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,0.75); }
 
-.hub-frentes {
+/* caixa de captura rápida por comando de texto, logo abaixo da saudação */
+.hub-quickbar {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 10px;
+  margin: 22px 28px 0;
+  opacity: 0;
+  animation: hub-top-in var(--dur-3) var(--ease-out) both;
+  animation-delay: 60ms;
+}
+.hub-quickbar input {
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid var(--color-chalk);
+  border-radius: var(--radius-xs);
+  padding: 15px 22px;
+  color: var(--color-chalk);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+}
+.hub-quickbar input::placeholder { color: rgba(255,255,255,0.55); }
+.hub-quickbar input:focus { border-color: var(--accent); }
+.hub-quickbar-send {
+  width: 48px; height: 48px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: var(--accent); color: var(--color-obsidian);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.hub-quickbar-send:hover { filter: brightness(1.06); }
+.hub-quickbar-send:active { transform: scale(0.9); }
+.hub-quickbar-send svg { width: 20px; height: 20px; }
+
+/* único ponto de entrada pra página Geral — o resto da navegação vive na
+   barra do topo (desktop) e na bottom-nav (mobile) */
+.hub-enter {
   position: relative; z-index: 1;
   margin-top: auto;
-  display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-end;
-  gap: 14px;
+  display: flex; justify-content: center;
   padding: 24px 20px max(32px, env(safe-area-inset-bottom));
 }
-.hub-frente-card {
-  display: flex; flex-direction: column; align-items: center; gap: 9px;
-  min-width: 90px;
-  padding: 16px 18px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid rgba(255,255,255,0.22);
-  background: rgba(7,6,7,0.4);
-  color: var(--color-chalk);
-  cursor: pointer;
-  opacity: 0;
-  animation: hub-card-in var(--dur-2) var(--ease-out) both;
-  animation-delay: calc(var(--row-i, 0) * 70ms + 140ms);
-  transition: transform var(--dur-2) var(--ease-spring),
-              background var(--dur-2) var(--ease-standard),
-              border-color var(--dur-2) var(--ease-standard);
-}
-@keyframes hub-card-in {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.hub-frente-card:hover, .hub-frente-card:focus-visible {
-  transform: translateY(-5px) scale(1.05);
-  background: rgba(7,6,7,0.6);
-  border-color: rgba(255,255,255,0.4);
-}
-.hub-frente-card:active { transform: translateY(-1px) scale(0.96); }
-.hub-frente-card .hub-frente-icon { color: var(--card-accent, #fff); display: flex; }
-.hub-frente-card .hub-frente-icon svg { width: 22px; height: 22px; }
-.hub-frente-label { font-family: var(--font-body); font-size: 12.5px; font-weight: 500; letter-spacing: 0.01em; }
-.hub-frente-card.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.hub-frente-card.primary .hub-frente-icon { color: var(--color-obsidian); }
-.hub-frente-card.primary .hub-frente-label { color: var(--color-obsidian); }
-.hub-frente-card.primary:hover {
-  background: color-mix(in srgb, var(--accent) 88%, white 12%);
+.hub-enter-btn {
+  min-width: 220px;
+  font-size: 16px;
+  padding: 16px 40px;
 }
 
 @media (max-width: 640px) {
-  .hub-frente-card { min-width: 78px; padding: 13px 14px; border-radius: var(--radius-sm); }
+  .hub-quickbar { margin: 18px 18px 0; }
   .hub-top { padding: max(20px, env(safe-area-inset-top)) 18px 0; }
 }
 
