@@ -640,10 +640,10 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   display: flex;
   flex-direction: column;
   background: var(--color-obsidian);
-  overflow: hidden;
+  overflow-x: hidden;
 }
 /* camada ambiente: a mesma foto, desfocada e escurecida, cobrindo a tela
-   inteira — dá cor/clima ao fundo sem forçar um recorte apertado no rosto.
+   inteira — desaparece conforme a mídia central expande (ver hub.js).
    Preto-e-branco com contraste, igual ao tratamento do projeto de design. */
 .hub-ambient {
   position: absolute; inset: -5%;
@@ -652,19 +652,8 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   background-position: 72% 18%;
   filter: grayscale(1) contrast(1.08) blur(46px) saturate(115%) brightness(0.5);
 }
-/* camada nítida: a foto de verdade, centralizada, num painel que preserva
-   as proporções do retrato, com as duas bordas esmaecendo pro fundo ambiente.
-   Recorte 16:9 "tight" — foco no músico, à direita do quadro. */
-.hub-portrait {
-  position: absolute; top: 0; bottom: 0; left: 50%;
-  transform: translateX(-50%) scale(1.08);
-  width: min(52vw, 680px);
-  background-image: url('../assets/hub-bg.jpg');
-  background-size: cover;
-  background-position: 72% 18%;
-  filter: grayscale(1) contrast(1.08);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 16%, black 84%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, black 16%, black 84%, transparent 100%);
+@media (max-width: 780px) {
+  .hub-ambient { background-position: 60% 20%; }
 }
 /* duotone teal → laranja em cima da foto (mix-blend-mode:color preserva a
    luminosidade do preto-e-branco por baixo, só tinge a cor) */
@@ -684,16 +673,6 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
       rgba(7,6,7,0.26) 55%,
       rgba(7,6,7,0.9) 100%);
 }
-@media (max-width: 780px) {
-  .hub-portrait {
-    top: 0; left: 0; right: 0; bottom: auto; width: auto; height: 54vh;
-    transform: scale(1.04);
-    background-position: 60% 20%;
-    -webkit-mask-image: linear-gradient(180deg, black 55%, transparent 100%);
-    mask-image: linear-gradient(180deg, black 55%, transparent 100%);
-  }
-  .hub-ambient { background-position: 60% 20%; }
-}
 .hub-top {
   position: relative; z-index: 1;
   display: flex; align-items: center; gap: 12px;
@@ -704,17 +683,88 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.hub-greeting { font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--color-chalk); }
-.hub-sub { font-family: var(--font-body); font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,0.75); }
 
-/* caixa de captura rápida por comando de texto, logo abaixo da saudação */
-.hub-quickbar {
+/* --------------------------------------------------------- HERO EXPANSÍVEL
+   Uma versão em JS puro do efeito "scroll to expand": a mídia central cresce
+   conforme o usuário rola o mouse/dedo sobre o Hub (ver renderHub em
+   js/views/hub.js, que controla width/height/translate a cada evento), até
+   preencher a tela e revelar a caixa de captura rápida + o botão Entrar. */
+.hub-hero {
   position: relative; z-index: 1;
-  display: flex; align-items: center; gap: 10px;
-  margin: 22px 28px 0;
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px;
+  padding: 12px 20px;
+  transition: gap var(--dur-2) var(--ease-standard);
+}
+.hub-hero.expanded { gap: 10px; }
+.hub-hero-media {
+  position: relative;
+  width: 320px; height: 420px;
+  max-width: 92vw; max-height: min(78vh, 460px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: center;
+  background-image: url('../assets/hub-bg.jpg');
+  background-size: cover;
+  background-position: 72% 18%;
+  filter: grayscale(1) contrast(1.08);
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.14);
+}
+@media (max-width: 780px) {
+  .hub-hero-media { background-position: 60% 20%; }
+}
+.hub-hero-sub {
+  font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  color: var(--color-chalk); text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  margin-bottom: 18px;
+}
+.hub-hero-title {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+  text-align: center;
+}
+.hub-hero-word {
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1;
+  color: var(--color-chalk);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+@media (min-width: 640px) {
+  .hub-hero-word { font-size: 52px; }
+}
+.hub-hero-hint {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  max-height: 40px;
+  opacity: 1;
+  overflow: hidden;
+  transition: opacity var(--dur-2) var(--ease-standard), max-height var(--dur-2) var(--ease-standard);
+}
+.hub-hero-hint svg { width: 16px; height: 16px; animation: hub-hint-bounce 1.6s ease-in-out infinite; }
+@keyframes hub-hint-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+.hub-hero.expanded .hub-hero-hint { opacity: 0; max-height: 0; pointer-events: none; }
+
+/* caixa de captura rápida + botão Entrar — revelados quando a mídia expande */
+.hub-reveal {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 0 28px max(28px, env(safe-area-inset-bottom));
   opacity: 0;
-  animation: hub-top-in var(--dur-3) var(--ease-out) both;
-  animation-delay: 60ms;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out);
+}
+.hub-reveal.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+.hub-quickbar {
+  display: flex; align-items: center; gap: 10px;
 }
 .hub-quickbar input {
   flex: 1; min-width: 0;
@@ -743,12 +793,7 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
 
 /* único ponto de entrada pra página Geral — o resto da navegação vive na
    barra do topo (desktop) e na bottom-nav (mobile) */
-.hub-enter {
-  position: relative; z-index: 1;
-  margin-top: auto;
-  display: flex; justify-content: center;
-  padding: 24px 20px max(32px, env(safe-area-inset-bottom));
-}
+.hub-enter { display: flex; justify-content: center; }
 .hub-enter-btn {
   min-width: 220px;
   font-size: 16px;
@@ -756,8 +801,8 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
 }
 
 @media (max-width: 640px) {
-  .hub-quickbar { margin: 18px 18px 0; }
   .hub-top { padding: max(20px, env(safe-area-inset-top)) 18px 0; }
+  .hub-reveal { padding: 0 18px max(24px, env(safe-area-inset-bottom)); }
 }
 
 /* --------------------------------------------------------------- AGENDA */
