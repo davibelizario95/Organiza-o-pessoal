@@ -8,6 +8,7 @@ import { uid, nowIso } from "./utils.js";
 const LS_PROFILES = "op_profiles";
 const lsItemsKey = (p) => `op_items_${p}`;
 const lsTemplatesKey = (p) => `op_templates_${p}`;
+const lsFiltersKey = (p) => `op_filters_${p}`;
 const LS_CURRENT = "op_current_profile";
 const LS_TRUSTED = "op_trusted_profiles";
 
@@ -317,4 +318,60 @@ export async function deleteTemplate(profileId, id) {
   const list = readLs(lsTemplatesKey(profileId), []).filter((t) => t.id !== id);
   writeLs(lsTemplatesKey(profileId), list);
   notifyLocal(lsTemplatesKey(profileId));
+}
+
+// ---------------------------------------------------------------- FILTROS
+// Filtros salvos (ex: "IC · Online") pra aplicar contexto + tags de um
+// clique só, em vez de clicar contexto e tag toda vez.
+
+export async function listFilters(profileId) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { collection, getDocs } = fb.firestore;
+    const snap = await getDocs(collection(fb.db, "profiles", profileId, "filters"));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
+  return readLs(lsFiltersKey(profileId), []);
+}
+
+export function subscribeFilters(profileId, cb) {
+  if (backendMode === "firebase") {
+    let unsub = () => {};
+    getFirebase().then((fb) => {
+      const { collection, onSnapshot } = fb.firestore;
+      unsub = onSnapshot(collection(fb.db, "profiles", profileId, "filters"), (snap) => {
+        cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      });
+    });
+    return () => unsub();
+  }
+  return subscribeLocal(lsFiltersKey(profileId), cb);
+}
+
+export async function createFilter(profileId, data) {
+  const filter = { createdAt: nowIso(), ...data };
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { collection, addDoc } = fb.firestore;
+    const ref = await addDoc(collection(fb.db, "profiles", profileId, "filters"), filter);
+    return { id: ref.id, ...filter };
+  }
+  const list = readLs(lsFiltersKey(profileId), []);
+  const full = { id: uid(), ...filter };
+  list.push(full);
+  writeLs(lsFiltersKey(profileId), list);
+  notifyLocal(lsFiltersKey(profileId));
+  return full;
+}
+
+export async function deleteFilter(profileId, id) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { doc, deleteDoc } = fb.firestore;
+    await deleteDoc(doc(fb.db, "profiles", profileId, "filters", id));
+    return;
+  }
+  const list = readLs(lsFiltersKey(profileId), []).filter((f) => f.id !== id);
+  writeLs(lsFiltersKey(profileId), list);
+  notifyLocal(lsFiltersKey(profileId));
 }

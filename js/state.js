@@ -7,6 +7,7 @@ export const state = {
   profile: null, // perfil ativo neste aparelho
   items: [],
   templates: [],
+  filters: [],
 };
 
 const listeners = new Set();
@@ -20,6 +21,7 @@ function emit() {
 
 let unsubItems = null;
 let unsubTemplates = null;
+let unsubFilters = null;
 
 const LS_CURRENT = "op_current_profile";
 const LS_TRUSTED = "op_trusted_profiles";
@@ -108,6 +110,7 @@ export function selectProfile(profileId, { silent } = {}) {
   localStorage.setItem(LS_CURRENT, profileId);
   if (unsubItems) unsubItems();
   if (unsubTemplates) unsubTemplates();
+  if (unsubFilters) unsubFilters();
   state.profile = state.profiles.find((p) => p.id === profileId) || state.profile;
   unsubItems = store.subscribeItems(profileId, (items) => {
     state.items = items;
@@ -117,6 +120,10 @@ export function selectProfile(profileId, { silent } = {}) {
     state.templates = templates;
     emit();
   });
+  unsubFilters = store.subscribeFilters(profileId, (filters) => {
+    state.filters = filters;
+    emit();
+  });
   if (!silent) emit();
 }
 
@@ -124,9 +131,11 @@ export function signOutProfile() {
   localStorage.removeItem(LS_CURRENT);
   if (unsubItems) unsubItems();
   if (unsubTemplates) unsubTemplates();
+  if (unsubFilters) unsubFilters();
   state.profile = null;
   state.items = [];
   state.templates = [];
+  state.filters = [];
   emit();
 }
 
