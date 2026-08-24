@@ -1,19 +1,38 @@
 import { icon } from "../icons.js";
 import { openModal } from "./modal.js";
 import { addItem, state } from "../state.js";
-import { FRENTES } from "../frentes.js";
+import { FRENTES, frenteByKey } from "../frentes.js";
 import { toast } from "./toast.js";
+import { parseQuickCommand } from "../quickCommand.js";
 
+// Caixa de conversa fixa: substitui o antigo botão "+" — digita o comando
+// ("Frente: título, horário dia, coluna, contexto, tag") e o item já é
+// criado na hora, em qualquer tela do app (mesmo parser do Hub).
 export function mountQuickCapture() {
-  if (document.getElementById("quick-capture-fab")) return;
-  const fab = document.createElement("button");
-  fab.id = "quick-capture-fab";
-  fab.className = "fab";
-  fab.title = "Captura rápida";
-  fab.innerHTML = icon("plus", "icon");
-  fab.style.color = "#fff";
-  document.body.appendChild(fab);
-  fab.addEventListener("click", openQuickCapture);
+  if (document.getElementById("quick-chat-bar")) return;
+  const form = document.createElement("form");
+  form.id = "quick-chat-bar";
+  form.className = "quick-chat";
+  form.innerHTML = `
+    <input type="text" id="quick-chat-input" autocomplete="off" placeholder="Frente: título, horário dia, coluna" />
+    <button type="submit" class="quick-chat-send" title="Adicionar">${icon("plus")}</button>
+  `;
+  document.body.appendChild(form);
+
+  const input = form.querySelector("#quick-chat-input");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const raw = input.value.trim();
+    if (!raw) return;
+    const { data, error } = parseQuickCommand(raw);
+    if (error) {
+      toast(error, "danger");
+      return;
+    }
+    await addItem(data);
+    toast(`Adicionado em ${frenteByKey(data.frente)?.label || data.frente}!`);
+    input.value = "";
+  });
 }
 
 export function openQuickCapture(defaultFrente) {

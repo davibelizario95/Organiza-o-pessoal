@@ -209,6 +209,7 @@ export async function createItem(profileId, data) {
     timerStartedAt: null,
     timerAlerted: false,
     voiceNotes: [],
+    subtasks: [],
     templateId: null,
     habit: false,
     habitDoneDates: [],

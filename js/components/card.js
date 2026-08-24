@@ -5,7 +5,7 @@ import { CONTEXTS, COLUMNS } from "../frentes.js";
 import { computeElapsedSec, startTimer, stopTimer } from "./timer.js";
 import { createRecorder } from "./voiceRecorder.js";
 import { getAudio, deleteAudio } from "../idb.js";
-import { formatDuration, escapeHtml, nowIso } from "../utils.js";
+import { formatDuration, escapeHtml, nowIso, uid } from "../utils.js";
 import { toast } from "./toast.js";
 
 export function renderTaskCard(item, { onDragStart } = {}) {
@@ -26,6 +26,11 @@ export function renderTaskCard(item, { onDragStart } = {}) {
       ${(item.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
       ${item.urgent ? `<span class="tag tag-urgent">Urgente</span>` : ""}
       ${item.important ? `<span class="tag tag-important">Importante</span>` : ""}
+      ${
+        item.subtasks?.length
+          ? `<span class="tag">${icon("check", "icon")} ${item.subtasks.filter((s) => s.done).length}/${item.subtasks.length}</span>`
+          : ""
+      }
       ${item.voiceNotes?.length ? `<span class="tag">${icon("mic", "icon")} ${item.voiceNotes.length}</span>` : ""}
       ${item.onAgenda ? `<span class="tag">${icon("agenda", "icon")}</span>` : ""}
     </div>
@@ -74,9 +79,50 @@ export function openTaskDetail(itemId) {
 
   const { body, close } = openModal({ title: "Detalhes do item", wide: true });
 
+  let subtasks = (item.subtasks || []).map((s) => ({ ...s }));
+
   body.innerHTML = `
     <label>Título</label>
     <input type="text" id="d-title" value="${escapeHtml(item.title)}" />
+
+    <div class="field-row">
+      <div>
+        <label>Prioridade</label>
+        <select id="d-priority">
+          <option value="normal" ${!item.urgent ? "selected" : ""}>Normal</option>
+          <option value="urgent" ${item.urgent ? "selected" : ""}>Urgente</option>
+        </select>
+      </div>
+      ${
+        item.frente === "trabalho"
+          ? `<div>
+              <label>Coluna</label>
+              <select id="d-column">
+                ${COLUMNS.map((c) => `<option value="${c.key}" ${item.column === c.key ? "selected" : ""}>${c.label}</option>`).join("")}
+              </select>
+            </div>`
+          : ""
+      }
+    </div>
+
+    <label class="checkbox-row"><input type="checkbox" id="d-agenda" ${item.onAgenda ? "checked" : ""}/> Colocar na agenda</label>
+    <div id="d-agenda-fields" class="field-row ${item.onAgenda ? "" : "hidden"}">
+      <div>
+        <label>Data</label>
+        <input type="date" id="d-date" value="${item.start ? item.start.slice(0, 10) : ""}" />
+      </div>
+      <div>
+        <label>Hora</label>
+        <input type="time" id="d-time" value="${item.start ? item.start.slice(11, 16) : ""}" />
+      </div>
+    </div>
+
+    <label>Subtarefas</label>
+    <div id="d-subtasks" style="display:flex;flex-direction:column;margin-bottom:8px;"></div>
+    <div class="flex gap-8">
+      <input type="text" id="d-subtask-new" placeholder="Nova subtarefa" style="flex:1;" />
+      <button class="btn btn-icon" id="d-subtask-add" title="Adicionar subtarefa">${icon("plus")}</button>
+    </div>
 
     <label>Notas</label>
     <textarea id="d-notes" placeholder="Detalhes, links, contexto...">${escapeHtml(item.notes || "")}</textarea>
@@ -86,37 +132,33 @@ export function openTaskDetail(itemId) {
         ? `
     <div class="field-row">
       <div>
-        <label>Coluna</label>
-        <select id="d-column">
-          ${COLUMNS.map((c) => `<option value="${c.key}" ${item.column === c.key ? "selected" : ""}>${c.label}</option>`).join("")}
-        </select>
-      </div>
-      <div>
         <label>Contexto</label>
         <select id="d-context">
           <option value="">—</option>
           ${CONTEXTS.map((c) => `<option value="${c.key}" ${item.context === c.key ? "selected" : ""}>${c.key} · ${c.label}</option>`).join("")}
         </select>
       </div>
-    </div>
-    <label>Tags (separadas por vírgula — pra filtrar dentro de cada contexto)</label>
-    <input type="text" id="d-tags" placeholder="Ex: Online, Especial" value="${escapeHtml((item.tags || []).join(", "))}" />
-    <label>Matriz de prioridade (Eisenhower)</label>
-    <div class="flex gap-8">
-      <label class="checkbox-row" style="margin:0;"><input type="checkbox" id="d-urgent" ${item.urgent ? "checked" : ""}/> Urgente</label>
-      <label class="checkbox-row" style="margin:0;"><input type="checkbox" id="d-important" ${item.important ? "checked" : ""}/> Importante</label>
+      <div>
+        <label>Tags (separadas por vírgula — pra filtrar dentro de cada contexto)</label>
+        <input type="text" id="d-tags" placeholder="Ex: Online, Especial" value="${escapeHtml((item.tags || []).join(", "))}" />
+      </div>
     </div>
 
-    <label>Cronômetro de trabalho</label>
+    <label>Tempo de trabalho</label>
     <div class="card" style="background:var(--bg-elev-2);padding:12px;">
       <div class="flex justify-between items-center">
-        <div class="timer-display" id="d-timer-display">${formatDuration(computeElapsedSec(item))}</div>
-        <div class="flex gap-8">
-          <button class="btn btn-sm" id="d-timer-toggle">${item.timerRunning ? icon("pause") + " Pausar" : icon("play") + " Iniciar"}</button>
+        <button class="btn btn-sm" id="d-timer-toggle">${item.timerRunning ? icon("pause") + " Pausar" : icon("play") + " Iniciar"}</button>
+        <div class="flex gap-16">
+          <div style="text-align:center;">
+            <div class="small text-dim" style="text-transform:uppercase;font-size:10.5px;">Real</div>
+            <div class="timer-display" id="d-timer-display" style="font-size:20px;">${formatDuration(computeElapsedSec(item))}</div>
+          </div>
+          <div style="text-align:center;">
+            <div class="small text-dim" style="text-transform:uppercase;font-size:10.5px;">Previsto (min)</div>
+            <input type="number" id="d-target" min="0" placeholder="--" value="${item.timeTargetMin || ""}" style="width:64px;text-align:center;padding:6px;" />
+          </div>
         </div>
       </div>
-      <label style="margin-top:10px;">Tempo alvo (minutos)</label>
-      <input type="number" id="d-target" min="0" placeholder="Ex: 50" value="${item.timeTargetMin || ""}" />
     </div>
 
     <label>Nota de voz</label>
@@ -134,18 +176,6 @@ export function openTaskDetail(itemId) {
         : ""
     }
 
-    <label class="checkbox-row"><input type="checkbox" id="d-agenda" ${item.onAgenda ? "checked" : ""}/> Colocar na agenda</label>
-    <div id="d-agenda-fields" class="field-row ${item.onAgenda ? "" : "hidden"}">
-      <div>
-        <label>Data</label>
-        <input type="date" id="d-date" value="${item.start ? item.start.slice(0, 10) : ""}" />
-      </div>
-      <div>
-        <label>Hora</label>
-        <input type="time" id="d-time" value="${item.start ? item.start.slice(11, 16) : ""}" />
-      </div>
-    </div>
-
     <div class="flex gap-8" style="margin-top:20px;justify-content:space-between;">
       <button class="btn btn-danger" id="d-delete">${icon("trash")} Excluir</button>
       <div class="flex gap-8">
@@ -154,6 +184,52 @@ export function openTaskDetail(itemId) {
       </div>
     </div>
   `;
+
+  // ---- subtarefas ----
+  const subtasksWrap = body.querySelector("#d-subtasks");
+  function renderSubtasks() {
+    subtasksWrap.innerHTML = subtasks.length
+      ? subtasks
+          .map(
+            (s) => `<div class="list-item" data-sub="${s.id}" style="padding:6px 0;">
+              <div class="list-item-check ${s.done ? "done" : ""}" data-sub-toggle="${s.id}">${s.done ? icon("check") : ""}</div>
+              <div class="list-item-title ${s.done ? "done" : ""}" style="flex:1;">${escapeHtml(s.title)}</div>
+              <button class="btn btn-icon btn-ghost btn-sm" data-sub-del="${s.id}">${icon("close")}</button>
+            </div>`
+          )
+          .join("")
+      : `<div class="empty-state" style="padding:8px 4px;text-align:left;">Nenhuma subtarefa ainda.</div>`;
+    subtasksWrap.querySelectorAll("[data-sub-toggle]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const s = subtasks.find((x) => x.id === el.dataset.subToggle);
+        s.done = !s.done;
+        renderSubtasks();
+      })
+    );
+    subtasksWrap.querySelectorAll("[data-sub-del]").forEach((el) =>
+      el.addEventListener("click", () => {
+        subtasks = subtasks.filter((x) => x.id !== el.dataset.subDel);
+        renderSubtasks();
+      })
+    );
+  }
+  renderSubtasks();
+  function addSubtask() {
+    const input = body.querySelector("#d-subtask-new");
+    const title = input.value.trim();
+    if (!title) return;
+    subtasks.push({ id: uid(), title, done: false });
+    input.value = "";
+    renderSubtasks();
+    input.focus();
+  }
+  body.querySelector("#d-subtask-add").addEventListener("click", addSubtask);
+  body.querySelector("#d-subtask-new").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addSubtask();
+    }
+  });
 
   // ---- cronômetro ----
   let timerInt = null;
@@ -258,6 +334,8 @@ export function openTaskDetail(itemId) {
     const patch = {
       title: body.querySelector("#d-title").value.trim() || item.title,
       notes: body.querySelector("#d-notes").value,
+      urgent: body.querySelector("#d-priority").value === "urgent",
+      subtasks,
     };
     if (item.frente === "trabalho") {
       patch.column = body.querySelector("#d-column").value;
@@ -267,8 +345,6 @@ export function openTaskDetail(itemId) {
         .value.split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-      patch.urgent = body.querySelector("#d-urgent").checked;
-      patch.important = body.querySelector("#d-important").checked;
       const t = body.querySelector("#d-target").value;
       patch.timeTargetMin = t ? Number(t) : null;
       if (patch.column === "done" && !item.completedAt) patch.completedAt = nowIso();

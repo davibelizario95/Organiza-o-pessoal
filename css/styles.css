@@ -318,19 +318,38 @@ main#view {
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn:disabled:active { transform: none; }
 
-.fab {
-  position: fixed; right: 22px; bottom: 90px; z-index: 35;
-  width: 56px; height: 56px; border-radius: 50%;
-  background: var(--accent); color: var(--accent-ink); border: none;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 26px;
+/* caixa de conversa fixa — substitui o antigo botão "+": digita o comando
+   e já cria o item na hora, em qualquer tela do app */
+.quick-chat {
+  position: fixed; left: 50%; bottom: calc(var(--bottomnav-h) + 14px); z-index: 35;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  width: calc(100vw - 28px); max-width: 480px;
+  background: var(--bg-elev);
+  border-radius: var(--radius-xs);
+  padding: 6px 6px 6px 20px;
+  box-shadow: 0 0 0 1.5px var(--border);
   animation: pop-in var(--dur-3) var(--ease-spring);
 }
 @media (min-width: 901px) {
-  .fab { bottom: 26px; right: 26px; }
+  .quick-chat { bottom: 26px; }
 }
-.fab:hover { transform: scale(1.06); }
-.fab:active { transform: scale(0.92); }
+.quick-chat input {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--text);
+  padding: 10px 0;
+}
+.quick-chat input::placeholder { color: var(--text-dim); }
+.quick-chat-send {
+  width: 40px; height: 40px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: var(--accent); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.quick-chat-send:hover { filter: brightness(1.06); }
+.quick-chat-send:active { transform: scale(0.9); }
+.quick-chat-send svg { width: 18px; height: 18px; }
 
 /* ----------------------------------------------------------------- CARD */
 .card {
@@ -663,7 +682,7 @@ input:focus, textarea:focus, select:focus {
 body.hub-mode .hovernav-trigger,
 body.hub-mode .hovernav,
 body.hub-mode .bottom-nav,
-body.hub-mode .fab { display: none !important; }
+body.hub-mode .quick-chat { display: none !important; }
 body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 100vh; }
 
 .hub {
@@ -875,6 +894,45 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
 }
 .agenda-event .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
 .agenda-event .t { color: var(--text-dim); font-size: 11px; }
+
+/* linha do tempo do dia — hoje, hora a hora, com os itens agendados
+   posicionados pelo horário de início */
+.timeline-day {
+  position: relative;
+  background: var(--bg-elev);
+  border-radius: var(--radius);
+  padding: 10px 12px 10px 0;
+  margin-bottom: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 420px;
+}
+.timeline-hour { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dotted var(--border); }
+.timeline-hour-label {
+  position: absolute; top: -7px; left: 10px;
+  font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--text-dim);
+  background: var(--bg-elev); padding-right: 6px;
+}
+.timeline-events { position: absolute; top: 0; left: 60px; right: 14px; bottom: 0; }
+.timeline-event {
+  position: absolute; left: 0; right: 0;
+  background: var(--bg-elev-2);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  overflow: hidden;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.timeline-event:hover { filter: brightness(0.97); }
+.timeline-event-time { font-size: 11px; font-weight: 700; color: var(--text-dim); margin-right: 6px; }
+.timeline-event-title { font-size: 12.5px; font-weight: 500; }
+.timeline-now { position: absolute; left: 60px; right: 14px; height: 2px; background: var(--danger); z-index: 2; }
+.timeline-now::before {
+  content: ""; position: absolute; left: -5px; top: -4px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--danger);
+}
 
 /* --------------------------------------------------------------- MISC */
 .text-dim { color: var(--text-dim); }

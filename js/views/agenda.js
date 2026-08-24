@@ -10,11 +10,69 @@ import { navigate } from "../router.js";
 
 let weekOffset = 0;
 
+const TIMELINE_START_HOUR = 6;
+const TIMELINE_END_HOUR = 23;
+const TIMELINE_HOUR_PX = 52;
+
 export function renderAgenda() {
   const view = document.getElementById("view");
   const unsub = subscribe(render);
   render();
   return unsub;
+
+  function renderTimeline(container) {
+    const today = todayKey();
+    const todayItems = state.items
+      .filter((i) => i.onAgenda && !i.allDay && i.start && i.start.slice(0, 10) === today)
+      .sort((a, b) => (a.start > b.start ? 1 : -1));
+
+    const hours = [];
+    for (let h = TIMELINE_START_HOUR; h <= TIMELINE_END_HOUR; h++) hours.push(h);
+    const totalPx = (TIMELINE_END_HOUR - TIMELINE_START_HOUR) * TIMELINE_HOUR_PX;
+
+    container.style.height = `${totalPx + 20}px`;
+    container.innerHTML = `
+      ${hours
+        .map(
+          (h, idx) =>
+            `<div class="timeline-hour" style="top:${idx * TIMELINE_HOUR_PX}px;"><span class="timeline-hour-label">${String(h).padStart(2, "0")}:00</span></div>`
+        )
+        .join("")}
+      <div class="timeline-events" id="timeline-events"></div>
+    `;
+
+    const eventsWrap = container.querySelector("#timeline-events");
+    if (!todayItems.length) {
+      eventsWrap.innerHTML = `<div class="small text-dim" style="padding:4px 0;">Nada com horário marcado hoje.</div>`;
+    }
+    todayItems.forEach((i) => {
+      const start = new Date(i.start);
+      const startMin = Math.max(start.getHours() * 60 + start.getMinutes(), TIMELINE_START_HOUR * 60);
+      let durMin = i.timeTargetMin || 30;
+      if (i.end) durMin = Math.max(15, (new Date(i.end) - start) / 60000);
+      const top = ((startMin - TIMELINE_START_HOUR * 60) / 60) * TIMELINE_HOUR_PX;
+      const height = Math.max(22, (durMin / 60) * TIMELINE_HOUR_PX);
+      const f = frenteByKey(i.frente);
+      const el = document.createElement("div");
+      el.className = "timeline-event";
+      el.style.top = `${top}px`;
+      el.style.height = `${height}px`;
+      el.style.borderLeftColor = f?.color || "var(--accent)";
+      el.innerHTML = `<span class="timeline-event-time">${formatTime(i.start)}</span><span class="timeline-event-title">${escapeHtml(i.title)}</span>`;
+      el.addEventListener("click", () => openTaskDetail(i.id));
+      eventsWrap.appendChild(el);
+    });
+
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    if (nowMin >= TIMELINE_START_HOUR * 60 && nowMin <= TIMELINE_END_HOUR * 60) {
+      const nowTop = ((nowMin - TIMELINE_START_HOUR * 60) / 60) * TIMELINE_HOUR_PX;
+      const nowLine = document.createElement("div");
+      nowLine.className = "timeline-now";
+      nowLine.style.top = `${nowTop}px`;
+      container.appendChild(nowLine);
+    }
+  }
 
   function render() {
     const base = startOfWeek();
@@ -28,6 +86,9 @@ export function renderAgenda() {
     const configured = isGoogleCalendarConfigured();
 
     view.innerHTML = `
+      <div class="section-title mt-0"><h2>Hoje — linha do tempo</h2></div>
+      <div class="timeline-day" id="timeline-day"></div>
+
       <div class="flex items-center justify-between wrap gap-8" style="margin-bottom:16px;">
         <div class="flex items-center gap-8">
           <button class="btn btn-icon" id="prev-week">${icon("chevronLeft")}</button>
@@ -48,6 +109,8 @@ export function renderAgenda() {
 
       <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:10px;" id="agenda-grid"></div>
     `;
+
+    renderTimeline(view.querySelector("#timeline-day"));
 
     view.querySelector("#prev-week").onclick = () => {
       weekOffset -= 1;
