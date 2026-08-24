@@ -24,8 +24,7 @@ export function renderTaskCard(item, { onDragStart } = {}) {
     <div class="task-card-meta">
       ${item.context ? `<span class="tag tag-${item.context.toLowerCase()}">${item.context}</span>` : ""}
       ${(item.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
-      ${item.urgent ? `<span class="tag tag-urgent">Urgente</span>` : ""}
-      ${item.important ? `<span class="tag tag-important">Importante</span>` : ""}
+      ${item.urgent ? `<span class="tag tag-urgent">Urgente</span>` : item.important ? `<span class="tag tag-important">Prioridade</span>` : ""}
       ${
         item.subtasks?.length
           ? `<span class="tag">${icon("check", "icon")} ${item.subtasks.filter((s) => s.done).length}/${item.subtasks.length}</span>`
@@ -89,7 +88,8 @@ export function openTaskDetail(itemId) {
       <div>
         <label>Prioridade</label>
         <select id="d-priority">
-          <option value="normal" ${!item.urgent ? "selected" : ""}>Normal</option>
+          <option value="normal" ${!item.urgent && !item.important ? "selected" : ""}>Normal</option>
+          <option value="priority" ${!item.urgent && item.important ? "selected" : ""}>Prioridade</option>
           <option value="urgent" ${item.urgent ? "selected" : ""}>Urgente</option>
         </select>
       </div>
@@ -331,10 +331,12 @@ export function openTaskDetail(itemId) {
     }
   };
   body.querySelector("#d-save").onclick = async () => {
+    const priority = body.querySelector("#d-priority").value;
     const patch = {
       title: body.querySelector("#d-title").value.trim() || item.title,
       notes: body.querySelector("#d-notes").value,
-      urgent: body.querySelector("#d-priority").value === "urgent",
+      urgent: priority === "urgent",
+      important: priority === "urgent" || priority === "priority",
       subtasks,
     };
     if (item.frente === "trabalho") {

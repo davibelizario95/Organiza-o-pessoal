@@ -1,9 +1,11 @@
-// Interpreta comandos de texto livre da caixa rápida do Hub, no formato:
-//   Frente: título, horário dia, coluna, contexto, tag
-// Exemplo: "Trabalho: Editar Online, 10h00, a fazer, IC, Online"
-// Todos os pedaços depois do título são opcionais e podem vir em qualquer
-// ordem — sem horário/coluna, o item cai direto em "A Fazer"; contexto
-// (IC/DB/PP) e qualquer outra palavra viram tags pra filtrar depois.
+// Interpreta comandos de texto livre da caixa rápida (Hub e barra global),
+// separados por vírgula, EM QUALQUER ORDEM:
+//   Trabalho, Editar Online, 10h00, a fazer, IC, Online, Urgente
+// Cada pedaço é reconhecido pelo que ele É (frente, horário/dia, coluna,
+// contexto, prioridade), não pela posição em que aparece. O único pedaço
+// que sobra sem reconhecer nada vira o título; pedaços extras que sobrarem
+// depois do título viram tags. "Frente: título" (com dois pontos, como
+// antes) continua funcionando do mesmo jeito.
 import { FRENTES, CONTEXTS } from "./frentes.js";
 
 const WEEKDAYS = {
@@ -16,6 +18,12 @@ const WEEKDAYS = {
   sabado: 6,
 };
 
+// pedaços que são só uma palavra/expressão-chave curta (horário, coluna,
+// contexto, prioridade, frente) — evita que um título comprido que por
+// acaso contenha essas palavras (ex: "Fazer compras") seja confundido
+// com um desses campos
+const KEYWORD_MAX_LEN = 24;
+
 function normalize(str) {
   return String(str || "")
     .toLowerCase()
@@ -24,20 +32,47 @@ function normalize(str) {
     .trim();
 }
 
+function matchFrente(text) {
+  const n = normalize(text);
+  return FRENTES.find((f) => normalize(f.label) === n || normalize(f.key) === n) || null;
+}
+
+// Comparação EXATA (não "includes") contra uma lista de frases curtas
+// conhecidas — evita que um título comum tipo "Fazer compras" seja
+// confundido com a coluna "A Fazer" só por conter a palavra "fazer".
+const COLUMN_PHRASES = {
+  todo: ["a fazer", "pra fazer", "fazer", "todo", "to do"],
+  doing: ["fazendo", "em andamento", "andamento", "doing"],
+  blocked: ["bloqueado", "bloqueada", "blocked"],
+  done: ["concluido", "concluida", "feito", "pronto", "done"],
+  inbox: ["inbox", "ideias", "ideia"],
+};
+
 function matchColumn(text) {
   const n = normalize(text);
-  if (n.includes("fazer")) return "todo";
-  if (n.includes("andamento")) return "doing";
-  if (n.includes("bloque")) return "blocked";
-  if (n.includes("conclu")) return "done";
-  if (n.includes("ideia") || n.includes("inbox")) return "inbox";
+  if (n.length > KEYWORD_MAX_LEN) return null;
+  for (const [key, phrases] of Object.entries(COLUMN_PHRASES)) {
+    if (phrases.includes(n)) return key;
+  }
   return null;
 }
 
 function matchContext(text) {
   const n = normalize(text);
+  if (n.length > KEYWORD_MAX_LEN) return null;
   const found = CONTEXTS.find((c) => normalize(c.key) === n || normalize(c.label) === n);
   return found ? found.key : null;
+}
+
+// Prioridade em 3 níveis: Normal, Prioridade (importante, sem urgência) e
+// Urgente — mapeados nos campos urgent/important que o app já usa.
+function matchPriority(text) {
+  const n = normalize(text);
+  if (n.length > KEYWORD_MAX_LEN) return null;
+  if (n === "normal") return "normal";
+  if (n === "prioridade" || n === "importante") return "priority";
+  if (n === "urgente") return "urgent";
+  return null;
 }
 
 function nextWeekday(from, targetDow) {
@@ -51,6 +86,7 @@ function nextWeekday(from, targetDow) {
 // Extrai dia (hoje/amanhã/dia da semana) e horário (10h, 10h00, 10:00) de um trecho.
 function parseSchedule(text) {
   const n = normalize(text);
+  if (n.length > KEYWORD_MAX_LEN) return null;
   let date = null;
 
   if (/\bhoje\b/.test(n)) {
@@ -92,33 +128,40 @@ function toLocalDateTimeString(date) {
 
 export function parseQuickCommand(raw) {
   const text = String(raw || "").trim();
-  const colonIdx = text.indexOf(":");
-  if (colonIdx === -1) {
-    return { error: "Comece com a frente e dois pontos. Ex: Trabalho: Montar arranjo" };
-  }
+  if (!text) return { error: "Digite algo pra criar o item." };
 
-  const frenteWord = text.slice(0, colonIdx).trim();
-  const rest = text.slice(colonIdx + 1).trim();
-  if (!rest) return { error: "Falta o título depois dos dois pontos." };
+  const parts = text.split(",").map((p) => p.trim()).filter(Boolean);
+  if (!parts.length) return { error: "Digite algo pra criar o item." };
 
-  const frente = FRENTES.find(
-    (f) => normalize(f.label) === normalize(frenteWord) || normalize(f.key) === normalize(frenteWord)
-  );
-  if (!frente) {
-    return {
-      error: `Não reconheci a frente "${frenteWord}". Use uma dessas: ${FRENTES.map((f) => f.label).join(", ")}.`,
-    };
-  }
-
-  const parts = rest.split(",").map((p) => p.trim()).filter(Boolean);
-  const title = parts.shift();
-  if (!title) return { error: "Falta o título da tarefa." };
-
+  let frente = null;
   let column = "todo"; // padrão pedido: sem horário/coluna, cai direto em "A Fazer"
   let schedule = null;
   let context = null;
-  const tags = [];
-  for (const part of parts) {
+  let priorityTier = null;
+  const titleParts = [];
+
+  for (let part of parts) {
+    // formato antigo "Frente: resto" dentro de um único pedaço — os dois
+    // pontos continuam funcionando, só não são mais obrigatórios
+    if (!frente) {
+      const colonIdx = part.indexOf(":");
+      if (colonIdx !== -1) {
+        const maybeFrente = matchFrente(part.slice(0, colonIdx));
+        if (maybeFrente) {
+          frente = maybeFrente;
+          part = part.slice(colonIdx + 1).trim();
+          if (!part) continue;
+        }
+      }
+    }
+
+    if (!frente) {
+      const f = matchFrente(part);
+      if (f) {
+        frente = f;
+        continue;
+      }
+    }
     const col = matchColumn(part);
     if (col) {
       column = col;
@@ -134,8 +177,22 @@ export function parseQuickCommand(raw) {
       context = ctx;
       continue;
     }
-    tags.push(part);
+    const pri = matchPriority(part);
+    if (pri) {
+      priorityTier = pri;
+      continue;
+    }
+    titleParts.push(part);
   }
+
+  if (!frente) {
+    return {
+      error: `Não reconheci a frente. Cite uma dessas em qualquer parte do texto: ${FRENTES.map((f) => f.label).join(", ")}.`,
+    };
+  }
+  if (!titleParts.length) return { error: "Falta o título da tarefa." };
+
+  const [title, ...tags] = titleParts;
 
   const data = {
     frente: frente.key,
@@ -150,6 +207,16 @@ export function parseQuickCommand(raw) {
   }
   if (context) data.context = context;
   if (tags.length) data.tags = tags;
+  if (priorityTier === "urgent") {
+    data.urgent = true;
+    data.important = true;
+  } else if (priorityTier === "priority") {
+    data.urgent = false;
+    data.important = true;
+  } else if (priorityTier === "normal") {
+    data.urgent = false;
+    data.important = false;
+  }
 
   return { data, frente };
 }
