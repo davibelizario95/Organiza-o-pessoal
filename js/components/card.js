@@ -19,6 +19,7 @@ export function renderTaskCard(item, { onDragStart } = {}) {
   const over = targetSec > 0 && elapsed >= targetSec;
 
   el.innerHTML = `
+    <button class="task-card-delete" data-quick-delete title="Excluir">${icon("close")}</button>
     <div class="task-card-title">${escapeHtml(item.title)}</div>
     <div class="task-card-meta">
       ${item.context ? `<span class="tag tag-${item.context.toLowerCase()}">${item.context}</span>` : ""}
@@ -40,6 +41,14 @@ export function renderTaskCard(item, { onDragStart } = {}) {
   `;
 
   el.addEventListener("click", () => openTaskDetail(item.id));
+  el.querySelector("[data-quick-delete]").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const ok = await confirmDialog(`Excluir "${item.title}"?`);
+    if (ok) {
+      await removeItem(item.id);
+      toast("Item excluído.");
+    }
+  });
   el.addEventListener("dragstart", (e) => {
     el.classList.add("dragging");
     e.dataTransfer.setData("text/plain", item.id);

@@ -21,10 +21,11 @@ export function contextLabel(key) {
   return CONTEXTS.find((c) => c.key === key)?.label || key;
 }
 
+// As 3 colunas reais do quadro de Trabalho. Itens com qualquer outro valor
+// de coluna (ex: "inbox"/"blocked" de versões antigas) não desaparecem —
+// caem na lista "Todas as tarefas" em trabalho.js até serem organizados.
 export const COLUMNS = [
-  { key: "inbox", label: "Ideias / Inbox" },
   { key: "todo", label: "A Fazer" },
-  { key: "doing", label: "Em Andamento" },
-  { key: "blocked", label: "Bloqueado" },
+  { key: "doing", label: "Fazendo" },
   { key: "done", label: "Concluído" },
 ];

@@ -1,8 +1,10 @@
-import { state, subscribe, editItem } from "../state.js";
+import { state, subscribe, editItem, removeItem } from "../state.js";
 import { COLUMNS, CONTEXTS } from "../frentes.js";
 import { icon } from "../icons.js";
 import { escapeHtml } from "../utils.js";
-import { renderTaskCard } from "../components/card.js";
+import { renderTaskCard, openTaskDetail } from "../components/card.js";
+import { confirmDialog } from "../components/modal.js";
+import { toast } from "../components/toast.js";
 import { startTimer, stopTimer } from "../components/timer.js";
 import { openWeeklyReview } from "./weeklyReview.js";
 import { openTemplatesManager } from "../components/templates.js";
@@ -55,6 +57,10 @@ export function renderTrabalho() {
     const availableTags = [...new Set([...byContext.flatMap((i) => i.tags || []), ...tagFilters])].sort((a, b) =>
       a.localeCompare(b, "pt-BR")
     );
+    // itens fora das 3 colunas do quadro (ex: "inbox"/"blocked" antigos, ou
+    // qualquer item novo ainda sem coluna definida) — lista resumida, só
+    // texto, em vez de cards, até serem organizados numa coluna real
+    const summaryItems = all.filter((i) => !COLUMNS.some((c) => c.key === i.column));
 
     view.innerHTML = `
       <div class="board-toolbar">
@@ -91,6 +97,12 @@ export function renderTrabalho() {
             </div>`
           : ""
       }
+      ${
+        summaryItems.length
+          ? `<div class="section-title" style="margin-top:0;"><h2>Todas as tarefas (${summaryItems.length})</h2></div>
+             <div class="card" id="summary-list" style="margin-bottom:16px;"></div>`
+          : ""
+      }
       <div class="board" id="board"></div>
     `;
 
@@ -117,6 +129,32 @@ export function renderTrabalho() {
     view.querySelector("#tpl-btn").addEventListener("click", () => openTemplatesManager());
     view.querySelector("#review-btn").addEventListener("click", () => openWeeklyReview());
     view.querySelector("#new-card-btn").addEventListener("click", () => openQuickCapture("trabalho"));
+
+    const summaryList = view.querySelector("#summary-list");
+    if (summaryList) {
+      summaryList.innerHTML = summaryItems
+        .map(
+          (i) => `<div class="list-item" data-open="${i.id}">
+            <div class="list-item-title" style="flex:1;cursor:pointer;">${escapeHtml(i.title)}</div>
+            <button class="btn btn-icon btn-ghost btn-sm" data-quickdel="${i.id}" title="Excluir">${icon("close")}</button>
+          </div>`
+        )
+        .join("");
+      summaryList.querySelectorAll(".list-item-title").forEach((el) =>
+        el.addEventListener("click", () => openTaskDetail(el.closest("[data-open]").dataset.open))
+      );
+      summaryList.querySelectorAll("[data-quickdel]").forEach((el) =>
+        el.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const item = state.items.find((i) => i.id === el.dataset.quickdel);
+          const ok = await confirmDialog(`Excluir "${item?.title}"?`);
+          if (ok) {
+            await removeItem(el.dataset.quickdel);
+            toast("Item excluído.");
+          }
+        })
+      );
+    }
 
     const board = view.querySelector("#board");
     COLUMNS.forEach((col) => {
