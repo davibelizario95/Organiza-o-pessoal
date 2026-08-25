@@ -837,21 +837,105 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   max-width: 92vw; max-height: min(78vh, 460px);
   border-radius: var(--radius);
   overflow: hidden;
+  background: var(--color-obsidian);
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.14);
+}
+.hub-hero-media.snap { transition: width 320ms var(--ease-out), height 320ms var(--ease-out), transform 320ms var(--ease-out); }
+/* a foto é uma camada própria: entra por cima do preto conforme o hero
+   expande, enquanto o resumo da agenda (camada de cima) dissolve */
+.hub-hero-photo {
+  position: absolute; inset: 0;
   display: flex; align-items: flex-end; justify-content: center;
   background-image: url('../assets/hub-bg.jpg');
   background-size: cover;
   background-position: 72% 18%;
   filter: grayscale(1) contrast(1.08);
-  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.14);
+  opacity: 0;
 }
-.hub-hero-media.snap { transition: width 320ms var(--ease-out), height 320ms var(--ease-out), transform 320ms var(--ease-out); }
+.hub-hero-photo.snap { transition: opacity 320ms var(--ease-out); }
 @media (max-width: 780px) {
-  .hub-hero-media { background-position: 60% 20%; }
+  .hub-hero-photo { background-position: 60% 20%; }
 }
 .hub-hero-sub {
   font-family: var(--font-body); font-size: 13px; font-weight: 500;
   color: var(--color-chalk); text-shadow: 0 1px 6px rgba(0,0,0,0.5);
   margin-bottom: 18px;
+}
+
+/* ---------------------------------------------- RESUMO DA AGENDA (abertura)
+   Primeira coisa que aparece no Hub, no lugar exato onde a foto ficava e no
+   mesmo formato dela. Fica travado no tamanho fechado do cartão (definido em
+   hub.js) pra não esticar o texto enquanto a mídia em volta cresce. */
+.hub-hero-agenda {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column;
+  padding: 30px 26px 26px;
+  border-radius: var(--radius);
+  background: var(--color-obsidian);
+  color: var(--color-chalk);
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hub-hero-agenda.snap { transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out); }
+.hub-hero-agenda:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.hub-agenda-head { display: flex; flex-direction: column; gap: 5px; }
+.hub-agenda-eyebrow {
+  font-family: var(--font-body); font-size: 10.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  color: rgba(255,255,255,0.6);
+}
+.hub-agenda-date {
+  font-family: var(--font-display);
+  font-size: 26px; line-height: 1;
+  letter-spacing: 0.01em; text-transform: uppercase;
+  color: var(--color-chalk);
+}
+.hub-agenda-list {
+  list-style: none; margin: 18px 0 0; padding: 0;
+  flex: 1; min-height: 0; overflow: hidden;
+}
+.hub-agenda-row {
+  display: grid;
+  grid-template-columns: 40px 6px minmax(0, 1fr);
+  align-items: center; gap: 9px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255,255,255,0.11);
+}
+.hub-agenda-row:first-child { border-top: none; padding-top: 0; }
+.hub-agenda-time {
+  font-family: var(--font-body); font-size: 12px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255,255,255,0.66);
+}
+.hub-agenda-dot { width: 6px; height: 6px; border-radius: 50%; }
+.hub-agenda-title {
+  font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  color: var(--color-chalk);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* o que já passou recua; o próximo compromisso ganha peso e o laranja */
+.hub-agenda-row.past { opacity: 0.42; }
+.hub-agenda-row.done .hub-agenda-title { text-decoration: line-through; opacity: 0.55; }
+.hub-agenda-row.next .hub-agenda-time { color: var(--accent); }
+.hub-agenda-row.next .hub-agenda-title { font-weight: 700; }
+.hub-agenda-foot {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-top: 14px;
+  font-family: var(--font-body); font-size: 11px; font-weight: 500;
+  color: rgba(255,255,255,0.58);
+}
+.hub-agenda-empty {
+  flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 7px;
+}
+.hub-agenda-empty strong {
+  font-family: var(--font-display); font-size: 30px; line-height: 1;
+  text-transform: uppercase; color: var(--color-chalk);
+}
+.hub-agenda-empty span {
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+  color: rgba(255,255,255,0.6);
 }
 .hub-hero-title {
   text-align: center;
