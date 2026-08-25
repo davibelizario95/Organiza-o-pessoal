@@ -1,11 +1,11 @@
 import { icon } from "../icons.js";
 import { openModal, confirmDialog } from "./modal.js";
 import { editItem, removeItem, state, addItem } from "../state.js";
-import { CONTEXTS, COLUMNS } from "../frentes.js";
+import { CONTEXTS, COLUMNS, frenteByKey } from "../frentes.js";
 import { computeElapsedSec, startTimer, stopTimer } from "./timer.js";
 import { createRecorder } from "./voiceRecorder.js";
 import { getAudio, deleteAudio } from "../idb.js";
-import { formatDuration, escapeHtml, nowIso, uid } from "../utils.js";
+import { formatDuration, escapeHtml, nowIso, uid, todayKey } from "../utils.js";
 import { toast } from "./toast.js";
 
 export function renderTaskCard(item, { onDragStart } = {}) {
@@ -76,49 +76,83 @@ export function openTaskDetail(itemId) {
   const item = state.items.find((i) => i.id === itemId);
   if (!item) return;
 
-  const { body, close } = openModal({ title: "Detalhes do item", wide: true });
+  const frenteInfo = frenteByKey(item.frente);
+  const { body, head, close } = openModal({ title: "", wide: true });
+
+  // troca o título genérico do modal por um "canal" (# frente), como na referência
+  const titleEl = head.querySelector("h2");
+  if (titleEl) {
+    titleEl.outerHTML = `
+      <div class="task-modal-channel">
+        <div class="task-modal-channel-label">Canal</div>
+        <div class="task-modal-channel-tag"># ${escapeHtml(frenteInfo?.label || item.frente)}</div>
+      </div>
+    `;
+  }
 
   let subtasks = (item.subtasks || []).map((s) => ({ ...s }));
+  let priorityTier = item.urgent ? "urgent" : item.important ? "priority" : "normal";
+  let onAgenda = !!item.onAgenda;
+  let agendaDate = item.start ? item.start.slice(0, 10) : null;
+  let agendaTime = item.start ? item.start.slice(11, 16) : "09:00";
+  let doneChecked = item.frente === "trabalho" ? item.column === "done" : !!item.completedAt;
+  let calViewYear, calViewMonth;
+  {
+    const base = agendaDate ? new Date(`${agendaDate}T00:00:00`) : new Date();
+    calViewYear = base.getFullYear();
+    calViewMonth = base.getMonth();
+  }
 
   body.innerHTML = `
-    <label>Título</label>
-    <input type="text" id="d-title" value="${escapeHtml(item.title)}" />
-
-    <div class="field-row">
-      <div>
-        <label>Prioridade</label>
-        <select id="d-priority">
-          <option value="normal" ${!item.urgent && !item.important ? "selected" : ""}>Normal</option>
-          <option value="priority" ${!item.urgent && item.important ? "selected" : ""}>Prioridade</option>
-          <option value="urgent" ${item.urgent ? "selected" : ""}>Urgente</option>
-        </select>
+    <div class="task-modal-actions">
+      <div class="task-modal-action-wrap">
+        <button type="button" class="task-modal-action-btn" id="btn-priority">${icon("flag")} <span id="btn-priority-label"></span></button>
+        <div class="task-popover" id="pop-priority">
+          <button type="button" class="task-popover-item" data-pri="normal">Normal</button>
+          <button type="button" class="task-popover-item" data-pri="priority">Prioridade</button>
+          <button type="button" class="task-popover-item" data-pri="urgent">Urgente</button>
+        </div>
       </div>
+      <div class="task-modal-action-wrap">
+        <button type="button" class="task-modal-action-btn" id="btn-agenda">${icon("agenda")} <span id="btn-agenda-label"></span></button>
+        <div class="task-popover task-popover-cal" id="pop-agenda">
+          <div class="mini-cal-head">
+            <button type="button" id="cal-prev">${icon("chevronLeft")}</button>
+            <strong id="cal-label"></strong>
+            <button type="button" id="cal-next">${icon("chevronRight")}</button>
+          </div>
+          <div class="mini-cal-dow"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+          <div class="mini-cal-grid" id="cal-grid"></div>
+          <div class="mini-cal-footer">
+            <input type="time" id="pop-agenda-time" value="${agendaTime}" />
+            <button type="button" class="btn btn-sm btn-ghost" id="pop-agenda-clear">Remover</button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="task-modal-action-btn" id="btn-subtasks">${icon("plus")} <span id="btn-subtasks-label">Subtarefas</span></button>
+    </div>
+
+    <div class="task-modal-main">
+      ${!item.habit ? `<button type="button" class="task-modal-check ${doneChecked ? "done" : ""}" id="d-done-toggle">${doneChecked ? icon("check") : ""}</button>` : ""}
+      <input type="text" id="d-title" class="task-modal-title" value="${escapeHtml(item.title)}" />
       ${
         item.frente === "trabalho"
-          ? `<div>
-              <label>Coluna</label>
-              <select id="d-column">
-                ${COLUMNS.map((c) => `<option value="${c.key}" ${item.column === c.key ? "selected" : ""}>${c.label}</option>`).join("")}
-              </select>
+          ? `<div class="task-modal-timer">
+              <button type="button" class="btn btn-sm" id="d-timer-toggle">${item.timerRunning ? icon("pause") + " Pause" : icon("play") + " Start"}</button>
+              <div class="task-modal-timer-stat">
+                <div class="task-modal-timer-label">Actual</div>
+                <div class="timer-display" id="d-timer-display" style="font-size:18px;">${formatDuration(computeElapsedSec(item))}</div>
+              </div>
+              <div class="task-modal-timer-stat">
+                <div class="task-modal-timer-label">Planned</div>
+                <input type="number" id="d-target" min="0" placeholder="--" value="${item.timeTargetMin || ""}" />
+              </div>
             </div>`
           : ""
       }
     </div>
 
-    <label class="checkbox-row"><input type="checkbox" id="d-agenda" ${item.onAgenda ? "checked" : ""}/> Colocar na agenda</label>
-    <div id="d-agenda-fields" class="field-row ${item.onAgenda ? "" : "hidden"}">
-      <div>
-        <label>Data</label>
-        <input type="date" id="d-date" value="${item.start ? item.start.slice(0, 10) : ""}" />
-      </div>
-      <div>
-        <label>Hora</label>
-        <input type="time" id="d-time" value="${item.start ? item.start.slice(11, 16) : ""}" />
-      </div>
-    </div>
-
-    <label>Subtarefas</label>
-    <div id="d-subtasks" style="display:flex;flex-direction:column;margin-bottom:8px;"></div>
+    <div id="d-subtasks" style="display:flex;flex-direction:column;margin:12px 0 4px;"></div>
     <div class="flex gap-8">
       <input type="text" id="d-subtask-new" placeholder="Nova subtarefa" style="flex:1;" />
       <button class="btn btn-icon" id="d-subtask-add" title="Adicionar subtarefa">${icon("plus")}</button>
@@ -132,34 +166,21 @@ export function openTaskDetail(itemId) {
         ? `
     <div class="field-row">
       <div>
+        <label>Coluna</label>
+        <select id="d-column">
+          ${COLUMNS.map((c) => `<option value="${c.key}" ${item.column === c.key ? "selected" : ""}>${c.label}</option>`).join("")}
+        </select>
+      </div>
+      <div>
         <label>Contexto</label>
         <select id="d-context">
           <option value="">—</option>
           ${CONTEXTS.map((c) => `<option value="${c.key}" ${item.context === c.key ? "selected" : ""}>${c.key} · ${c.label}</option>`).join("")}
         </select>
       </div>
-      <div>
-        <label>Tags (separadas por vírgula — pra filtrar dentro de cada contexto)</label>
-        <input type="text" id="d-tags" placeholder="Ex: Online, Especial" value="${escapeHtml((item.tags || []).join(", "))}" />
-      </div>
     </div>
-
-    <label>Tempo de trabalho</label>
-    <div class="card" style="background:var(--bg-elev-2);padding:12px;">
-      <div class="flex justify-between items-center">
-        <button class="btn btn-sm" id="d-timer-toggle">${item.timerRunning ? icon("pause") + " Pausar" : icon("play") + " Iniciar"}</button>
-        <div class="flex gap-16">
-          <div style="text-align:center;">
-            <div class="small text-dim" style="text-transform:uppercase;font-size:10.5px;">Real</div>
-            <div class="timer-display" id="d-timer-display" style="font-size:20px;">${formatDuration(computeElapsedSec(item))}</div>
-          </div>
-          <div style="text-align:center;">
-            <div class="small text-dim" style="text-transform:uppercase;font-size:10.5px;">Previsto (min)</div>
-            <input type="number" id="d-target" min="0" placeholder="--" value="${item.timeTargetMin || ""}" style="width:64px;text-align:center;padding:6px;" />
-          </div>
-        </div>
-      </div>
-    </div>
+    <label>Tags (separadas por vírgula — pra filtrar dentro de cada contexto)</label>
+    <input type="text" id="d-tags" placeholder="Ex: Online, Especial" value="${escapeHtml((item.tags || []).join(", "))}" />
 
     <label>Nota de voz</label>
     <div class="card" style="background:var(--bg-elev-2);padding:12px;">
@@ -185,6 +206,121 @@ export function openTaskDetail(itemId) {
     </div>
   `;
 
+  // ---- popovers (prioridade / agenda) ----
+  const popovers = [];
+  function registerPopover(trigger, panel) {
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = panel.classList.contains("open");
+      popovers.forEach((p) => p.panel.classList.remove("open"));
+      if (!isOpen) panel.classList.add("open");
+    });
+    panel.addEventListener("click", (e) => e.stopPropagation());
+    popovers.push({ trigger, panel });
+  }
+  function closeAllPopovers() {
+    popovers.forEach((p) => p.panel.classList.remove("open"));
+  }
+  document.addEventListener("click", closeAllPopovers);
+  registerPopover(body.querySelector("#btn-priority"), body.querySelector("#pop-priority"));
+  registerPopover(body.querySelector("#btn-agenda"), body.querySelector("#pop-agenda"));
+
+  // ---- prioridade ----
+  function updatePriorityLabel() {
+    body.querySelector("#btn-priority-label").textContent =
+      priorityTier === "urgent" ? "Urgente" : priorityTier === "priority" ? "Prioridade" : "Normal";
+  }
+  updatePriorityLabel();
+  body.querySelectorAll("#pop-priority [data-pri]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      priorityTier = btn.dataset.pri;
+      updatePriorityLabel();
+      closeAllPopovers();
+    })
+  );
+
+  // ---- agenda: mini calendário ----
+  function updateAgendaLabel() {
+    const label = body.querySelector("#btn-agenda-label");
+    if (!onAgenda || !agendaDate) {
+      label.textContent = "Agenda";
+      return;
+    }
+    if (agendaDate === todayKey()) {
+      label.textContent = "Hoje";
+      return;
+    }
+    label.textContent = new Date(`${agendaDate}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  }
+  updateAgendaLabel();
+  function renderMiniCal() {
+    const monthLabel = new Date(calViewYear, calViewMonth, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    body.querySelector("#cal-label").textContent = monthLabel;
+    const firstDow = new Date(calViewYear, calViewMonth, 1).getDay();
+    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+    const todayStr = todayKey();
+    let html = "";
+    for (let i = 0; i < firstDow; i++) html += "<span></span>";
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = `${calViewYear}-${String(calViewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      html += `<button type="button" class="mini-cal-day ${agendaDate === key ? "selected" : ""} ${key === todayStr ? "today" : ""}" data-day="${key}">${d}</button>`;
+    }
+    const grid = body.querySelector("#cal-grid");
+    grid.innerHTML = html;
+    grid.querySelectorAll("[data-day]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        agendaDate = btn.dataset.day;
+        onAgenda = true;
+        updateAgendaLabel();
+        renderMiniCal();
+      })
+    );
+  }
+  renderMiniCal();
+  body.querySelector("#cal-prev").addEventListener("click", () => {
+    calViewMonth -= 1;
+    if (calViewMonth < 0) {
+      calViewMonth = 11;
+      calViewYear -= 1;
+    }
+    renderMiniCal();
+  });
+  body.querySelector("#cal-next").addEventListener("click", () => {
+    calViewMonth += 1;
+    if (calViewMonth > 11) {
+      calViewMonth = 0;
+      calViewYear += 1;
+    }
+    renderMiniCal();
+  });
+  body.querySelector("#pop-agenda-time").addEventListener("change", (e) => {
+    agendaTime = e.target.value || "09:00";
+  });
+  body.querySelector("#pop-agenda-clear").addEventListener("click", () => {
+    onAgenda = false;
+    agendaDate = null;
+    updateAgendaLabel();
+    closeAllPopovers();
+  });
+
+  // ---- checkbox principal (feito/não feito) ----
+  const doneBtn = body.querySelector("#d-done-toggle");
+  function setDoneVisual() {
+    if (!doneBtn) return;
+    doneBtn.classList.toggle("done", doneChecked);
+    doneBtn.innerHTML = doneChecked ? icon("check") : "";
+  }
+  doneBtn?.addEventListener("click", () => {
+    doneChecked = !doneChecked;
+    setDoneVisual();
+    const colSelect = body.querySelector("#d-column");
+    if (colSelect) colSelect.value = doneChecked ? "done" : "todo";
+  });
+  body.querySelector("#d-column")?.addEventListener("change", (e) => {
+    doneChecked = e.target.value === "done";
+    setDoneVisual();
+  });
+
   // ---- subtarefas ----
   const subtasksWrap = body.querySelector("#d-subtasks");
   function renderSubtasks() {
@@ -199,6 +335,7 @@ export function openTaskDetail(itemId) {
           )
           .join("")
       : `<div class="empty-state" style="padding:8px 4px;text-align:left;">Nenhuma subtarefa ainda.</div>`;
+    body.querySelector("#btn-subtasks-label").textContent = subtasks.length ? `Subtarefas (${subtasks.length})` : "Subtarefas";
     subtasksWrap.querySelectorAll("[data-sub-toggle]").forEach((el) =>
       el.addEventListener("click", () => {
         const s = subtasks.find((x) => x.id === el.dataset.subToggle);
@@ -230,6 +367,11 @@ export function openTaskDetail(itemId) {
       addSubtask();
     }
   });
+  body.querySelector("#btn-subtasks").addEventListener("click", () => {
+    const input = body.querySelector("#d-subtask-new");
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => input.focus(), 150);
+  });
 
   // ---- cronômetro ----
   let timerInt = null;
@@ -243,19 +385,13 @@ export function openTaskDetail(itemId) {
       const fresh = state.items.find((i) => i.id === itemId);
       if (fresh.timerRunning) {
         await stopTimer(itemId);
-        e.target.innerHTML = icon("play") + " Iniciar";
+        e.target.innerHTML = icon("play") + " Start";
       } else {
         await startTimer(itemId);
-        e.target.innerHTML = icon("pause") + " Pausar";
+        e.target.innerHTML = icon("pause") + " Pause";
       }
     });
   }
-
-  // ---- agenda toggle ----
-  const agendaCheck = body.querySelector("#d-agenda");
-  agendaCheck?.addEventListener("change", () => {
-    body.querySelector("#d-agenda-fields").classList.toggle("hidden", !agendaCheck.checked);
-  });
 
   // ---- voice notes ----
   const voiceList = body.querySelector("#d-voicenotes");
@@ -315,6 +451,7 @@ export function openTaskDetail(itemId) {
 
   function cleanup() {
     if (timerInt) clearInterval(timerInt);
+    document.removeEventListener("click", closeAllPopovers);
   }
 
   body.querySelector("#d-cancel").onclick = () => {
@@ -331,12 +468,11 @@ export function openTaskDetail(itemId) {
     }
   };
   body.querySelector("#d-save").onclick = async () => {
-    const priority = body.querySelector("#d-priority").value;
     const patch = {
       title: body.querySelector("#d-title").value.trim() || item.title,
       notes: body.querySelector("#d-notes").value,
-      urgent: priority === "urgent",
-      important: priority === "urgent" || priority === "priority",
+      urgent: priorityTier === "urgent",
+      important: priorityTier === "urgent" || priorityTier === "priority",
       subtasks,
     };
     if (item.frente === "trabalho") {
@@ -351,6 +487,8 @@ export function openTaskDetail(itemId) {
       patch.timeTargetMin = t ? Number(t) : null;
       if (patch.column === "done" && !item.completedAt) patch.completedAt = nowIso();
       if (patch.column !== "done") patch.completedAt = null;
+    } else {
+      patch.completedAt = doneChecked ? item.completedAt || nowIso() : null;
     }
     if (item.habit) {
       const today = new Date().toISOString().slice(0, 10);
@@ -360,12 +498,9 @@ export function openTaskDetail(itemId) {
       else dates.delete(today);
       patch.habitDoneDates = [...dates];
     }
-    const onAgenda = body.querySelector("#d-agenda").checked;
     patch.onAgenda = onAgenda;
-    if (onAgenda) {
-      const date = body.querySelector("#d-date").value;
-      const time = body.querySelector("#d-time").value || "09:00";
-      if (date) patch.start = `${date}T${time}:00`;
+    if (onAgenda && agendaDate) {
+      patch.start = `${agendaDate}T${agendaTime || "09:00"}:00`;
     }
     cleanup();
     await editItem(itemId, patch);

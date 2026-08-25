@@ -493,6 +493,85 @@ main#view {
 .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .modal-head h2 { font-size: 19px; letter-spacing: 0.02em; }
 
+/* -------------------------------------------------- DETALHE DO ITEM (modal) */
+/* cabeçalho "# canal", no lugar do título genérico do modal */
+.task-modal-channel { display: flex; flex-direction: column; gap: 1px; }
+.task-modal-channel-label {
+  font-family: var(--font-body); font-size: 10.5px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim);
+}
+.task-modal-channel-tag { font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--text); }
+
+/* fileira de botões-atalho: Prioridade, Agenda, Subtarefas */
+.task-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.task-modal-action-wrap { position: relative; }
+.task-modal-action-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-elev-2); border: none; border-radius: var(--radius-xs);
+  padding: 7px 14px; cursor: pointer;
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 500; color: var(--text);
+}
+.task-modal-action-btn:hover { filter: brightness(0.97); }
+.task-modal-action-btn svg { width: 14px; height: 14px; }
+
+/* popovers (prioridade e agenda) */
+.task-popover {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 10;
+  display: none; flex-direction: column;
+  background: var(--bg-elev); border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1.5px var(--border);
+  padding: 6px; min-width: 160px;
+}
+.task-popover.open { display: flex; }
+.task-popover-item {
+  text-align: left; background: none; border: none; cursor: pointer;
+  padding: 8px 10px; border-radius: var(--radius-xs);
+  font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--text);
+}
+.task-popover-item:hover { background: var(--bg-elev-2); }
+
+/* mini calendário (popover de agenda) */
+.task-popover-cal { min-width: 240px; padding: 10px; }
+.mini-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.mini-cal-head button { background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; display: flex; }
+.mini-cal-head button:hover { color: var(--text); }
+.mini-cal-head strong { font-family: var(--font-body); font-size: 13px; font-weight: 500; text-transform: capitalize; }
+.mini-cal-dow, .mini-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mini-cal-dow span { text-align: center; font-family: var(--font-body); font-size: 10px; font-weight: 500; color: var(--text-dim); padding-bottom: 4px; }
+.mini-cal-day {
+  aspect-ratio: 1; background: none; border: none; border-radius: 50%; cursor: pointer;
+  font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-cal-day:hover { background: var(--bg-elev-2); }
+.mini-cal-day.today { color: var(--accent); font-weight: 700; }
+.mini-cal-day.selected { background: var(--accent); color: var(--accent-ink); }
+.mini-cal-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.mini-cal-footer input[type="time"] { width: auto; flex: 1; padding: 8px 10px; }
+
+/* título + check + cronômetro, lado a lado */
+.task-modal-main { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.task-modal-check {
+  width: 26px; height: 26px; flex-shrink: 0;
+  border: 1.5px solid var(--color-obsidian); border-radius: 50%; background: var(--bg-elev);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-chalk);
+}
+.task-modal-check.done { background: var(--ok); border-color: var(--ok); }
+.task-modal-check svg { width: 14px; height: 14px; }
+.task-modal-title {
+  flex: 1; min-width: 160px;
+  border: none; background: none; outline: none; padding: 0;
+  font-family: var(--font-display); font-size: 24px; text-transform: none; letter-spacing: 0;
+  color: var(--text);
+}
+.task-modal-timer { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.task-modal-timer-stat { text-align: center; }
+.task-modal-timer-label {
+  font-family: var(--font-body); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim);
+}
+.task-modal-timer-stat input[type="number"] { width: 56px; text-align: center; padding: 5px; margin-top: 2px; }
+
 /* ---------------------------------------------------------------- FORMS */
 label { display: block; font-family: var(--font-body); font-size: 12.5px; font-weight: 500; color: var(--text-dim); margin: 12px 0 5px; }
 label:first-child { margin-top: 0; }
