@@ -171,7 +171,7 @@ export function renderHub() {
     toast(`Adicionado em ${frenteByKey(data.frente)?.label || data.frente}!`);
     input.value = "";
   });
-  attachVoiceButton(input, view.querySelector("#hub-quickbar-mic"));
+  attachVoiceButton(input, view.querySelector("#hub-quickbar-mic"), () => form.requestSubmit());
   view.querySelector("#hub-enter-btn").addEventListener("click", () => navigate("dashboard"));
 
   // ------------------------------------------- hero que expande com o scroll

@@ -1176,3 +1176,15 @@ svg.icon { width: 18px; height: 18px; flex-shrink: 0; }
 .mic-btn.recording { background: var(--danger); color: var(--color-chalk); border-color: var(--danger); animation: pulse 1.1s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 audio { width: 100%; height: 32px; }
+
+/* iOS dá zoom automático em qualquer campo de texto com fonte menor que
+   16px ao focar — força 16px em todo campo de digitação no mobile (sem
+   mexer no tamanho do desktop) só pra evitar esse zoom indesejado */
+@media (max-width: 640px) {
+  input[type="text"], input[type="number"], input[type="date"], input[type="time"], input[type="password"],
+  textarea, select,
+  .hub-quickbar input,
+  .quick-chat input {
+    font-size: 16px;
+  }
+}

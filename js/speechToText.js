@@ -34,10 +34,11 @@ function withFrenteColon(text) {
 }
 
 // Liga um botão de microfone a um campo de texto: clique começa a ouvir,
-// clique de novo (ou o reconhecimento terminar sozinho) para. O texto
-// reconhecido substitui o campo — quem confirma o envio é o usuário, não a
-// transcrição, já que reconhecimento de voz erra.
-export function attachVoiceButton(input, micBtn) {
+// clique de novo (ou o reconhecimento terminar sozinho) para. Assim que
+// reconhece a fala, já preenche o campo e envia sozinho — `onDone` é quem
+// dispara o envio (ex.: form.requestSubmit()), reaproveitando a mesma
+// validação/erro que o envio manual já tem.
+export function attachVoiceButton(input, micBtn, onDone) {
   if (!isSpeechRecognitionSupported()) {
     micBtn.style.display = "none";
     return;
@@ -63,7 +64,7 @@ export function attachVoiceButton(input, micBtn) {
       .trim();
     if (transcript) {
       input.value = withFrenteColon(transcript);
-      input.focus();
+      onDone?.();
     }
   };
   recognition.onerror = (e) => {

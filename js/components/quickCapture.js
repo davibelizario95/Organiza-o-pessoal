@@ -35,7 +35,7 @@ export function mountQuickCapture() {
     toast(`Adicionado em ${frenteByKey(data.frente)?.label || data.frente}!`);
     input.value = "";
   });
-  attachVoiceButton(input, form.querySelector("#quick-chat-mic"));
+  attachVoiceButton(input, form.querySelector("#quick-chat-mic"), () => form.requestSubmit());
 }
 
 export function openQuickCapture(defaultFrente) {
