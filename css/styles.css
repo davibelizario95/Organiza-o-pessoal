@@ -970,6 +970,23 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   background: rgba(7,6,7,0.18);
 }
 .hub-agenda-dayhint span.active { background: var(--color-obsidian); width: 14px; border-radius: 3px; }
+/* setinhas de navegação — ficam fora da slide que desliza, então não se
+   mexem durante a troca de dia; existem principalmente pra quem está no
+   computador, sem como arrastar o dedo (o swipe continua funcionando) */
+.hub-agenda-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  z-index: 2;
+  width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: rgba(7,6,7,0.06); color: var(--color-obsidian);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.hub-agenda-arrow:hover { background: rgba(7,6,7,0.12); }
+.hub-agenda-arrow:active { transform: translateY(-50%) scale(0.88); }
+.hub-agenda-arrow svg { width: 15px; height: 15px; }
+.hub-agenda-arrow-prev { left: 8px; }
+.hub-agenda-arrow-next { right: 8px; }
 .hub-hero-title {
   text-align: center;
   font-family: var(--font-display);

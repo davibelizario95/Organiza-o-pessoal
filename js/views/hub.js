@@ -225,24 +225,52 @@ export function renderHub() {
   }
 
   // o cartão reflete o estado real: criar algo pra hoje na caixa rápida já
-  // aparece aqui, sem precisar recarregar
+  // aparece aqui, sem precisar recarregar. Só o conteúdo do dia (a slide) é
+  // trocado — as setinhas de navegação (abaixo) ficam fora dela, fixas, pra
+  // sobreviverem aos re-renders sem precisar recriar os listeners.
   let agendaDayOffset = 0;
   function renderAgendaCard() {
-    agendaCard.innerHTML = agendaSummaryHtml(isMobile ? 4 : 5, agendaDayOffset);
+    const old = agendaCard.querySelector(".hub-agenda-slide");
+    if (old) old.remove();
+    agendaCard.insertAdjacentHTML("afterbegin", agendaSummaryHtml(isMobile ? 4 : 5, agendaDayOffset));
   }
   const unsubItems = subscribe(renderAgendaCard);
   renderAgendaCard();
 
+  // setinhas pra quem está no computador (sem como arrastar o dedo) trocar
+  // de dia clicando — o swipe (mais abaixo) continua funcionando igual
+  const arrowPrev = document.createElement("button");
+  arrowPrev.type = "button";
+  arrowPrev.className = "hub-agenda-arrow hub-agenda-arrow-prev";
+  arrowPrev.setAttribute("aria-label", "Dia anterior");
+  arrowPrev.innerHTML = icon("chevronLeft");
+  const arrowNext = document.createElement("button");
+  arrowNext.type = "button";
+  arrowNext.className = "hub-agenda-arrow hub-agenda-arrow-next";
+  arrowNext.setAttribute("aria-label", "Próximo dia");
+  arrowNext.innerHTML = icon("chevronRight");
+  agendaCard.append(arrowPrev, arrowNext);
+  arrowPrev.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!expanded && !entering) goToDay(-1);
+  });
+  arrowNext.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!expanded && !entering) goToDay(1);
+  });
+
   // tocar no cartão abre a Agenda inteira — mas só se for um toque de
-  // verdade: arrastar pra rolar (mais de 10px) não navega
+  // verdade: arrastar pra rolar (mais de 10px) não navega, e clicar numa
+  // setinha não conta como toque no cartão
   let cardDownY = null;
   let cardDownX = null;
   agendaCard.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".hub-agenda-arrow")) return;
     cardDownX = e.clientX;
     cardDownY = e.clientY;
   });
   agendaCard.addEventListener("pointerup", (e) => {
-    if (cardDownY === null) return;
+    if (cardDownY === null || e.target.closest(".hub-agenda-arrow")) return;
     const moved = Math.hypot(e.clientX - cardDownX, e.clientY - cardDownY);
     cardDownY = null;
     cardDownX = null;

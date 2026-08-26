@@ -1,4 +1,5 @@
 import { toast } from "./components/toast.js";
+import { FRENTES } from "./frentes.js";
 
 // Reconhecimento de voz (Web Speech API) pra ditar o comando rápido em vez
 // de digitar — sem servidor, roda direto no navegador. Some silenciosamente
@@ -7,6 +8,29 @@ const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRec
 
 export function isSpeechRecognitionSupported() {
   return !!SpeechRecognitionImpl;
+}
+
+function normalize(str) {
+  return String(str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim();
+}
+
+// Falando não tem vírgula ("Trabalho gravar guitarra 15h"), então o comando
+// rápido não acha onde termina a frente sem os dois-pontos. Se a fala
+// começa com o nome de uma frente, insere ": " logo depois — "Trabalho:
+// gravar guitarra 15h" — que é o formato que o parser já reconhece mesmo
+// sem vírgula nenhuma.
+function withFrenteColon(text) {
+  const words = text.trim().split(/\s+/);
+  if (!words.length) return text;
+  const first = normalize(words[0]);
+  const frente = FRENTES.find((f) => normalize(f.label) === first || normalize(f.key) === first);
+  if (!frente) return text;
+  const rest = words.slice(1).join(" ");
+  return rest ? `${frente.label}: ${rest}` : `${frente.label}: `;
 }
 
 // Liga um botão de microfone a um campo de texto: clique começa a ouvir,
@@ -38,7 +62,7 @@ export function attachVoiceButton(input, micBtn) {
       .join(" ")
       .trim();
     if (transcript) {
-      input.value = transcript;
+      input.value = withFrenteColon(transcript);
       input.focus();
     }
   };
