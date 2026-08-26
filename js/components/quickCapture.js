@@ -4,6 +4,7 @@ import { addItem, state } from "../state.js";
 import { FRENTES, frenteByKey } from "../frentes.js";
 import { toast } from "./toast.js";
 import { parseQuickCommand } from "../quickCommand.js";
+import { attachVoiceButton } from "../speechToText.js";
 
 // Caixa de conversa fixa: substitui o antigo botão "+" — digita o comando
 // ("Frente: título, horário dia, coluna, contexto, tag") e o item já é
@@ -15,6 +16,7 @@ export function mountQuickCapture() {
   form.className = "quick-chat";
   form.innerHTML = `
     <input type="text" id="quick-chat-input" autocomplete="off" placeholder="Frente: título, horário dia, coluna" />
+    <button type="button" class="quick-chat-mic" id="quick-chat-mic" title="Ditar por voz">${icon("mic")}</button>
     <button type="submit" class="quick-chat-send" title="Adicionar">${icon("plus")}</button>
   `;
   document.body.appendChild(form);
@@ -33,6 +35,7 @@ export function mountQuickCapture() {
     toast(`Adicionado em ${frenteByKey(data.frente)?.label || data.frente}!`);
     input.value = "";
   });
+  attachVoiceButton(input, form.querySelector("#quick-chat-mic"));
 }
 
 export function openQuickCapture(defaultFrente) {

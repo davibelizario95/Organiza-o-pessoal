@@ -5,35 +5,53 @@ import { icon } from "../icons.js";
 import { greeting, escapeHtml, formatTime, todayKey } from "../utils.js";
 import { toast } from "../components/toast.js";
 import { parseQuickCommand } from "../quickCommand.js";
+import { attachVoiceButton } from "../speechToText.js";
 
 // Cartão de abertura do Hub: o resumo da agenda do dia. Ocupa exatamente o
 // mesmo formato/lugar que a foto ocupava — a foto continua existindo, só
 // aparece depois, quando o hero expande com o scroll (ver applyProgress).
-function agendaSummaryHtml(maxRows) {
-  const today = todayKey();
+// `dayOffset` (0 = hoje) muda o dia mostrado — arrastar o dedo pro lado
+// dentro do cartão troca esse valor (ver o gesto de swipe mais abaixo).
+function agendaSummaryHtml(maxRows, dayOffset = 0) {
+  const target = new Date();
+  target.setDate(target.getDate() + dayOffset);
+  const dayKey = todayKey(target);
+  const isToday = dayOffset === 0;
+
   const items = state.items
-    .filter((i) => i.onAgenda && i.start && i.start.slice(0, 10) === today)
+    .filter((i) => i.onAgenda && i.start && i.start.slice(0, 10) === dayKey)
     .sort((a, b) => {
       if (!!a.allDay !== !!b.allDay) return a.allDay ? -1 : 1;
       return a.start > b.start ? 1 : -1;
     });
 
-  const dateLabel = new Date()
+  const dateLabel = target
     .toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })
     .replace(/\./g, "");
 
+  // pontinhos: só fazem sentido pertinho de hoje (±2 dias) — servem de dica
+  // visual de que dá pra arrastar, não um calendário de verdade
+  const dayHint =
+    Math.abs(dayOffset) <= 2
+      ? `<div class="hub-agenda-dayhint">${[-2, -1, 0, 1, 2]
+          .map((d) => `<span class="${d === dayOffset ? "active" : ""}"></span>`)
+          .join("")}</div>`
+      : "";
+
   const head = `
     <div class="hub-agenda-head">
-      <span class="hub-agenda-eyebrow">Agenda de hoje</span>
+      <span class="hub-agenda-eyebrow">${isToday ? "Agenda de hoje" : "Agenda"}</span>
       <strong class="hub-agenda-date">${escapeHtml(dateLabel)}</strong>
     </div>`;
 
   if (!items.length) {
-    return `${head}
+    return `<div class="hub-agenda-slide">${head}
       <div class="hub-agenda-empty">
         <strong>Dia livre</strong>
-        <span>Nada marcado na agenda de hoje.</span>
-      </div>`;
+        <span>${isToday ? "Nada marcado na agenda de hoje." : "Nada marcado nesse dia."}</span>
+      </div>
+      ${dayHint}
+    </div>`;
   }
 
   const nowMs = Date.now();
@@ -77,12 +95,14 @@ function agendaSummaryHtml(maxRows) {
   const after = timed.length - (startIdx + shown.length);
   if (after > 0) hidden.push(`+${after} depois`);
 
-  return `${head}
+  return `<div class="hub-agenda-slide">${head}
     <ul class="hub-agenda-list">${[...allDay, ...shown].map(row).join("")}</ul>
     <div class="hub-agenda-foot">
       <span>${items.length} ${items.length === 1 ? "compromisso" : "compromissos"}</span>
       ${hidden.length ? `<span>${hidden.join(" · ")}</span>` : ""}
-    </div>`;
+    </div>
+    ${dayHint}
+  </div>`;
 }
 
 // Hub central: primeira tela ao entrar num perfil. Abre com o resumo da
@@ -123,6 +143,7 @@ export function renderHub() {
         <form class="hub-quickbar" id="hub-quickbar">
           <input type="text" id="hub-quickbar-input" autocomplete="off"
             placeholder="Frente: título, horário dia, coluna" />
+          <button type="button" class="hub-quickbar-mic" id="hub-quickbar-mic" title="Ditar por voz">${icon("mic")}</button>
           <button type="submit" class="hub-quickbar-send" title="Adicionar">${icon("plus")}</button>
         </form>
         <div class="hub-enter">
@@ -150,6 +171,7 @@ export function renderHub() {
     toast(`Adicionado em ${frenteByKey(data.frente)?.label || data.frente}!`);
     input.value = "";
   });
+  attachVoiceButton(input, view.querySelector("#hub-quickbar-mic"));
   view.querySelector("#hub-enter-btn").addEventListener("click", () => navigate("dashboard"));
 
   // ------------------------------------------- hero que expande com o scroll
@@ -204,8 +226,9 @@ export function renderHub() {
 
   // o cartão reflete o estado real: criar algo pra hoje na caixa rápida já
   // aparece aqui, sem precisar recarregar
+  let agendaDayOffset = 0;
   function renderAgendaCard() {
-    agendaCard.innerHTML = agendaSummaryHtml(isMobile ? 4 : 5);
+    agendaCard.innerHTML = agendaSummaryHtml(isMobile ? 4 : 5, agendaDayOffset);
   }
   const unsubItems = subscribe(renderAgendaCard);
   renderAgendaCard();
@@ -231,6 +254,94 @@ export function renderHub() {
       navigate("agenda");
     }
   });
+
+  // arrastar o dedo pro lado dentro do cartão troca o dia mostrado — feito
+  // com touch events diretamente no cartão (não no window) e com
+  // stopPropagation assim que o gesto é reconhecido como horizontal, pra não
+  // competir com o scroll vertical que expande o hero (ver onTouchMove mais
+  // abaixo, que continua dono do gesto vertical).
+  let swipeStartX = 0;
+  let swipeStartY = 0;
+  let swipeDecided = false;
+  let swipeHorizontal = false;
+
+  function currentSlide() {
+    return agendaCard.querySelector(".hub-agenda-slide");
+  }
+
+  function goToDay(dir) {
+    // dir: -1 troca de dedo pra direita (dia anterior), 1 pra esquerda (próximo dia)
+    const outEl = currentSlide();
+    if (!outEl) return;
+    outEl.style.transition = "transform 200ms var(--ease-out), opacity 200ms var(--ease-out)";
+    outEl.style.transform = `translateX(${dir * -36}px)`;
+    outEl.style.opacity = "0";
+    setTimeout(() => {
+      agendaDayOffset += dir;
+      renderAgendaCard();
+      const inEl = currentSlide();
+      if (!inEl) return;
+      inEl.style.transition = "none";
+      inEl.style.transform = `translateX(${dir * 36}px)`;
+      inEl.style.opacity = "0";
+      requestAnimationFrame(() => {
+        inEl.style.transition = "transform 220ms var(--ease-out), opacity 220ms var(--ease-out)";
+        inEl.style.transform = "translateX(0)";
+        inEl.style.opacity = "1";
+      });
+    }, 200);
+  }
+
+  agendaCard.addEventListener(
+    "touchstart",
+    (e) => {
+      if (expanded || entering) return;
+      swipeStartX = e.touches[0].clientX;
+      swipeStartY = e.touches[0].clientY;
+      swipeDecided = false;
+      swipeHorizontal = false;
+    },
+    { passive: true }
+  );
+  agendaCard.addEventListener(
+    "touchmove",
+    (e) => {
+      if (expanded || entering) return;
+      const dx = e.touches[0].clientX - swipeStartX;
+      const dy = e.touches[0].clientY - swipeStartY;
+      if (!swipeDecided && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        swipeDecided = true;
+        swipeHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+      if (!swipeHorizontal) return; // gesto vertical: deixa o window cuidar (expande o hero)
+      e.preventDefault();
+      e.stopPropagation();
+      const slide = currentSlide();
+      if (slide) {
+        slide.style.transition = "none";
+        slide.style.transform = `translateX(${dx}px)`;
+      }
+    },
+    { passive: false }
+  );
+  agendaCard.addEventListener(
+    "touchend",
+    (e) => {
+      if (!swipeHorizontal) return;
+      e.stopPropagation();
+      const dx = (e.changedTouches[0]?.clientX ?? swipeStartX) - swipeStartX;
+      const slide = currentSlide();
+      if (Math.abs(dx) > 55) {
+        goToDay(dx < 0 ? 1 : -1);
+      } else if (slide) {
+        slide.style.transition = "transform 200ms var(--ease-out)";
+        slide.style.transform = "translateX(0)";
+      }
+      swipeHorizontal = false;
+      swipeDecided = false;
+    },
+    { passive: true }
+  );
 
   function setProgress(p) {
     progress = Math.min(1, Math.max(0, p));

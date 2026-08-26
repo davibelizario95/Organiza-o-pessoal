@@ -351,6 +351,24 @@ main#view {
 .quick-chat-send:active { transform: scale(0.9); }
 .quick-chat-send svg { width: 18px; height: 18px; }
 
+.quick-chat-mic {
+  width: 40px; height: 40px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: var(--bg-elev-2); color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.quick-chat-mic:hover { filter: brightness(0.97); }
+.quick-chat-mic:active { transform: scale(0.9); }
+.quick-chat-mic svg { width: 17px; height: 17px; }
+/* gravando: pulso vermelho — o único sinal "ao vivo" da interface, então
+   precisa ficar óbvio que está ouvindo */
+.quick-chat-mic.listening { background: var(--danger); color: var(--color-chalk); animation: mic-pulse 1.1s ease-in-out infinite; }
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200,64,47,0.5); }
+  50% { box-shadow: 0 0 0 7px rgba(200,64,47,0); }
+}
+
 /* ----------------------------------------------------------------- CARD */
 .card {
   background: var(--bg-elev);
@@ -872,25 +890,29 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   display: flex; flex-direction: column;
   padding: 30px 26px 26px;
   border-radius: var(--radius);
-  background: var(--color-obsidian);
-  color: var(--color-chalk);
+  background: var(--color-limestone);
+  color: var(--color-obsidian);
   overflow: hidden;
   cursor: pointer;
+  touch-action: pan-y;
   -webkit-tap-highlight-color: transparent;
 }
 .hub-hero-agenda.snap { transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out); }
 .hub-hero-agenda:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+/* conteúdo do dia — é este wrapper que desliza quando o usuário arrasta o
+   dedo pro lado pra trocar de dia (ver hub.js), não o cartão inteiro */
+.hub-agenda-slide { display: flex; flex-direction: column; height: 100%; }
 .hub-agenda-head { display: flex; flex-direction: column; gap: 5px; }
 .hub-agenda-eyebrow {
   font-family: var(--font-body); font-size: 10.5px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.09em;
-  color: rgba(255,255,255,0.6);
+  color: rgba(7,6,7,0.55);
 }
 .hub-agenda-date {
   font-family: var(--font-display);
   font-size: 26px; line-height: 1;
   letter-spacing: 0.01em; text-transform: uppercase;
-  color: var(--color-chalk);
+  color: var(--color-obsidian);
 }
 .hub-agenda-list {
   list-style: none; margin: 18px 0 0; padding: 0;
@@ -901,18 +923,18 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   grid-template-columns: 40px 6px minmax(0, 1fr);
   align-items: center; gap: 9px;
   padding: 8px 0;
-  border-top: 1px solid rgba(255,255,255,0.11);
+  border-top: 1px solid rgba(7,6,7,0.12);
 }
 .hub-agenda-row:first-child { border-top: none; padding-top: 0; }
 .hub-agenda-time {
   font-family: var(--font-body); font-size: 12px; font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: rgba(255,255,255,0.66);
+  color: rgba(7,6,7,0.6);
 }
 .hub-agenda-dot { width: 6px; height: 6px; border-radius: 50%; }
 .hub-agenda-title {
   font-family: var(--font-body); font-size: 13px; font-weight: 500;
-  color: var(--color-chalk);
+  color: var(--color-obsidian);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 /* o que já passou recua; o próximo compromisso ganha peso e o laranja */
@@ -924,19 +946,30 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
   margin-top: 14px;
   font-family: var(--font-body); font-size: 11px; font-weight: 500;
-  color: rgba(255,255,255,0.58);
+  color: rgba(7,6,7,0.5);
 }
 .hub-agenda-empty {
   flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 7px;
 }
 .hub-agenda-empty strong {
   font-family: var(--font-display); font-size: 30px; line-height: 1;
-  text-transform: uppercase; color: var(--color-chalk);
+  text-transform: uppercase; color: var(--color-obsidian);
 }
 .hub-agenda-empty span {
   font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
-  color: rgba(255,255,255,0.6);
+  color: rgba(7,6,7,0.55);
 }
+/* pontinhos de dia embaixo — indicam que dá pra arrastar e sempre marcam
+   qual dia (dentre os 5 ao redor de hoje) está sendo visto agora */
+.hub-agenda-dayhint {
+  display: flex; justify-content: center; gap: 5px;
+  margin-top: 12px;
+}
+.hub-agenda-dayhint span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(7,6,7,0.18);
+}
+.hub-agenda-dayhint span.active { background: var(--color-obsidian); width: 14px; border-radius: 3px; }
 .hub-hero-title {
   text-align: center;
   font-family: var(--font-display);
@@ -1017,6 +1050,18 @@ body.hub-mode main#view { padding: 0; max-width: none; margin: 0; min-height: 10
 .hub-quickbar-send:hover { filter: brightness(1.06); }
 .hub-quickbar-send:active { transform: scale(0.9); }
 .hub-quickbar-send svg { width: 16px; height: 16px; }
+
+.hub-quickbar-mic {
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%; border: 1.5px solid var(--color-chalk);
+  background: rgba(255,255,255,0.06); color: var(--color-chalk);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.hub-quickbar-mic:hover { background: rgba(255,255,255,0.14); }
+.hub-quickbar-mic:active { transform: scale(0.9); }
+.hub-quickbar-mic svg { width: 15px; height: 15px; }
+.hub-quickbar-mic.listening { background: var(--danger); border-color: var(--danger); animation: mic-pulse 1.1s ease-in-out infinite; }
 
 /* único ponto de entrada pra página Geral — o resto da navegação vive na
    barra do topo (desktop) e na bottom-nav (mobile) */
