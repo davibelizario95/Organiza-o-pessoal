@@ -16,18 +16,34 @@ const AGENDA_ONLY_FRENTE = "agenda";
 
 function openTimelineQuickAdd() {
   const { body, close } = openModal({ title: "Adicionar à agenda" });
-  const now = new Date();
-  const roundedMin = Math.ceil(now.getMinutes() / 5) * 5;
-  const defaultTime = `${String(roundedMin === 60 ? now.getHours() + 1 : now.getHours()).padStart(2, "0")}:${String(roundedMin % 60).padStart(2, "0")}`;
+
+  // horário padrão: agora, arredondado pros 5min mais próximos, com 30min
+  // de duração — dá pra ajustar tudo antes de salvar
+  const fmtTime = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const start = new Date();
+  start.setSeconds(0, 0);
+  start.setMinutes(Math.ceil(start.getMinutes() / 5) * 5);
+  const end = new Date(start.getTime() + 30 * 60000);
 
   body.innerHTML = `
     <label>O que é?</label>
     <input type="text" id="qa-title" placeholder="Ex: Dentista, ligar pro fornecedor..." />
+
+    <label>Dia</label>
+    <input type="date" id="qa-date" value="${todayKey()}" />
+
     <label class="checkbox-row"><input type="checkbox" id="qa-allday" /> Dia todo (sem horário)</label>
-    <div id="qa-time-row">
-      <label>Horário (hoje)</label>
-      <input type="time" id="qa-time" value="${defaultTime}" />
+    <div id="qa-time-row" class="field-row">
+      <div>
+        <label>Começa</label>
+        <input type="time" id="qa-time-start" value="${fmtTime(start)}" />
+      </div>
+      <div>
+        <label>Até</label>
+        <input type="time" id="qa-time-end" value="${fmtTime(end)}" />
+      </div>
     </div>
+
     <div class="flex gap-8" style="margin-top:18px;justify-content:flex-end;">
       <button class="btn" id="qa-cancel">Cancelar</button>
       <button class="btn btn-primary" id="qa-save">Adicionar</button>
@@ -48,17 +64,29 @@ function openTimelineQuickAdd() {
       titleInput.focus();
       return;
     }
+    const date = body.querySelector("#qa-date").value || todayKey();
     const allDay = allDayCheck.checked;
-    const time = body.querySelector("#qa-time").value || "09:00";
-    await addItem({
+    const data = {
       frente: AGENDA_ONLY_FRENTE,
       type: "task",
       title,
       column: "done",
       onAgenda: true,
       allDay,
-      start: `${todayKey()}T${allDay ? "00:00" : time}:00`,
-    });
+    };
+    if (allDay) {
+      data.start = `${date}T00:00:00`;
+    } else {
+      const startTime = body.querySelector("#qa-time-start").value || "09:00";
+      const endTime = body.querySelector("#qa-time-end").value;
+      data.start = `${date}T${startTime}:00`;
+      if (endTime && endTime > startTime) {
+        data.end = `${date}T${endTime}:00`;
+      } else if (endTime) {
+        toast("Horário de término antes do começo — ignorado.", "danger");
+      }
+    }
+    await addItem(data);
     toast("Adicionado à agenda!");
     close();
   }
