@@ -1,12 +1,76 @@
-import { state, subscribe } from "../state.js";
+import { state, subscribe, addItem } from "../state.js";
 import { frenteByKey } from "../frentes.js";
 import { icon } from "../icons.js";
 import { escapeHtml, formatTime, startOfWeek, todayKey } from "../utils.js";
 import { openTaskDetail } from "../components/card.js";
+import { openModal } from "../components/modal.js";
 import { isGoogleCalendarConfigured } from "../config.js";
 import { gcalState, connect, syncNow } from "../googleCalendar.js";
 import { toast } from "../components/toast.js";
 import { navigate } from "../router.js";
+
+// Item de agenda "solto": não pertence a nenhuma frente/função da vida —
+// só existe pra aparecer na agenda (linha do tempo + grade da semana),
+// igual aos eventos importados do Google. Ver openTimelineQuickAdd abaixo.
+const AGENDA_ONLY_FRENTE = "agenda";
+
+function openTimelineQuickAdd() {
+  const { body, close } = openModal({ title: "Adicionar à agenda" });
+  const now = new Date();
+  const roundedMin = Math.ceil(now.getMinutes() / 5) * 5;
+  const defaultTime = `${String(roundedMin === 60 ? now.getHours() + 1 : now.getHours()).padStart(2, "0")}:${String(roundedMin % 60).padStart(2, "0")}`;
+
+  body.innerHTML = `
+    <label>O que é?</label>
+    <input type="text" id="qa-title" placeholder="Ex: Dentista, ligar pro fornecedor..." />
+    <label class="checkbox-row"><input type="checkbox" id="qa-allday" /> Dia todo (sem horário)</label>
+    <div id="qa-time-row">
+      <label>Horário (hoje)</label>
+      <input type="time" id="qa-time" value="${defaultTime}" />
+    </div>
+    <div class="flex gap-8" style="margin-top:18px;justify-content:flex-end;">
+      <button class="btn" id="qa-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="qa-save">Adicionar</button>
+    </div>
+  `;
+
+  const titleInput = body.querySelector("#qa-title");
+  setTimeout(() => titleInput.focus(), 30);
+  const allDayCheck = body.querySelector("#qa-allday");
+  const timeRow = body.querySelector("#qa-time-row");
+  allDayCheck.addEventListener("change", () => {
+    timeRow.style.display = allDayCheck.checked ? "none" : "";
+  });
+
+  async function save() {
+    const title = titleInput.value.trim();
+    if (!title) {
+      titleInput.focus();
+      return;
+    }
+    const allDay = allDayCheck.checked;
+    const time = body.querySelector("#qa-time").value || "09:00";
+    await addItem({
+      frente: AGENDA_ONLY_FRENTE,
+      type: "task",
+      title,
+      column: "done",
+      onAgenda: true,
+      allDay,
+      start: `${todayKey()}T${allDay ? "00:00" : time}:00`,
+    });
+    toast("Adicionado à agenda!");
+    close();
+  }
+  body.querySelector("#qa-cancel").onclick = close;
+  body.querySelector("#qa-save").onclick = save;
+  titleInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      save();
+    }
+  });
+}
 
 let weekOffset = 0;
 
@@ -86,7 +150,7 @@ export function renderAgenda() {
     const configured = isGoogleCalendarConfigured();
 
     view.innerHTML = `
-      <div class="section-title mt-0"><h2>Hoje — linha do tempo</h2></div>
+      <div class="section-title mt-0"><h2>Hoje — linha do tempo</h2><button class="btn btn-sm" id="timeline-add-btn">${icon("plus")} Adicionar</button></div>
       <div class="timeline-day" id="timeline-day"></div>
 
       <div class="flex items-center justify-between wrap gap-8" style="margin-bottom:16px;">
@@ -111,6 +175,7 @@ export function renderAgenda() {
     `;
 
     renderTimeline(view.querySelector("#timeline-day"));
+    view.querySelector("#timeline-add-btn").addEventListener("click", openTimelineQuickAdd);
 
     view.querySelector("#prev-week").onclick = () => {
       weekOffset -= 1;
@@ -138,7 +203,8 @@ export function renderAgenda() {
       render();
       try {
         const r = await syncNow();
-        toast(`Sincronizado: ${r.pushed} enviados, ${r.pulled} eventos do Google.`);
+        const failedMsg = r.failed ? ` (${r.failed} falharam)` : "";
+        toast(`Sincronizado: ${r.pushed} enviados, ${r.pulled} eventos do Google.${failedMsg}`, r.failed ? "danger" : "info");
       } catch (e) {
         toast(e.message || "Erro ao sincronizar.", "danger");
       }

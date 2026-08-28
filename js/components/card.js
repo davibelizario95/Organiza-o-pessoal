@@ -19,6 +19,7 @@ export function renderTaskCard(item, { onDragStart } = {}) {
   const over = targetSec > 0 && elapsed >= targetSec;
 
   el.innerHTML = `
+    ${item.column !== "done" ? `<button class="task-card-done" data-quick-done title="Marcar como concluído">${icon("check")}</button>` : ""}
     <button class="task-card-delete" data-quick-delete title="Excluir">${icon("close")}</button>
     <div class="task-card-title">${escapeHtml(item.title)}</div>
     <div class="task-card-meta">
@@ -45,6 +46,12 @@ export function renderTaskCard(item, { onDragStart } = {}) {
   `;
 
   el.addEventListener("click", () => openTaskDetail(item.id));
+  el.querySelector("[data-quick-done]")?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (item.timerRunning) await stopTimer(item.id);
+    await editItem(item.id, { column: "done", completedAt: item.completedAt || nowIso() });
+    toast("Marcado como concluído.");
+  });
   el.querySelector("[data-quick-delete]").addEventListener("click", async (e) => {
     e.stopPropagation();
     const ok = await confirmDialog(`Excluir "${item.title}"?`);
@@ -85,7 +92,7 @@ export function openTaskDetail(itemId) {
     titleEl.outerHTML = `
       <div class="task-modal-channel">
         <div class="task-modal-channel-label">Canal</div>
-        <div class="task-modal-channel-tag"># ${escapeHtml(frenteInfo?.label || item.frente)}</div>
+        <div class="task-modal-channel-tag"># ${escapeHtml(frenteInfo?.label || (item.frente === "agenda" ? "Agenda" : item.frente))}</div>
       </div>
     `;
   }

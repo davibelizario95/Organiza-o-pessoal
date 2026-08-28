@@ -5,7 +5,7 @@ import { escapeHtml } from "../utils.js";
 import { renderTaskCard, openTaskDetail } from "../components/card.js";
 import { confirmDialog } from "../components/modal.js";
 import { toast } from "../components/toast.js";
-import { startTimer, stopTimer } from "../components/timer.js";
+import { stopTimer } from "../components/timer.js";
 import { openWeeklyReview } from "./weeklyReview.js";
 import { openTemplatesManager } from "../components/templates.js";
 import { openFiltersManager } from "../components/filters.js";
@@ -192,9 +192,10 @@ export function renderTrabalho() {
     if (newColumn === "done" && !item.completedAt) patch.completedAt = nowIso();
     if (newColumn !== "done") patch.completedAt = null;
     await editItem(id, patch);
-    if (newColumn === "doing" && item.column !== "doing" && !item.timerRunning) {
-      await startTimer(id);
-    } else if (item.column === "doing" && newColumn !== "doing" && item.timerRunning) {
+    // não inicia o cronômetro sozinho ao mover pra "Fazendo" — só para se
+    // já estava rodando e o card sai de "Fazendo" (o início continua sendo
+    // manual, pelo botão Start dentro do card)
+    if (item.column === "doing" && newColumn !== "doing" && item.timerRunning) {
       await stopTimer(id);
     }
   }
