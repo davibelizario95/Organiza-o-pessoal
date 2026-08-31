@@ -758,6 +758,28 @@ function LickForm(props) {
   const [registeringArtist, setRegisteringArtist] = useState(false);
   const [artistError, setArtistError] = useState(null);
   const [showArtistSuggestions, setShowArtistSuggestions] = useState(false);
+  // referências já salvas (só existe se estiver editando um lick que já
+  // tem id de verdade) — sem isso, reabrir o lick não mostrava o que já
+  // tinha sido enviado, só o campo vazio pra escolher arquivo novo
+  const [existingMedia, setExistingMedia] = useState([]);
+  const [existingMediaUrls, setExistingMediaUrls] = useState({});
+  const [existingMediaLoading, setExistingMediaLoading] = useState(isEdit);
+
+  async function refreshExistingMedia() {
+    if (!isEdit) return;
+    const list = await fetchMediaForLick(id);
+    setExistingMedia(list);
+    const urlMap = {};
+    for (const it of list) urlMap[it.id] = await getMediaSignedUrl(it.storage_path);
+    setExistingMediaUrls(urlMap);
+    setExistingMediaLoading(false);
+  }
+  useEffect(() => { refreshExistingMedia(); }, []);
+
+  async function removeExistingMedia(item) {
+    await deleteMediaItem(item);
+    await refreshExistingMedia();
+  }
 
   const artistList = artists || [];
   const artistTrimmed = artist.trim();
@@ -842,6 +864,22 @@ function LickForm(props) {
       h("label", null, "Link de referência (tab, vídeo)"),
       h("input", { value: link, onChange: e => setLink(e.target.value), placeholder: "https://..." }),
       h("label", null, "Vídeo ou áudio de referência (opcional)"),
+      isEdit && h("div", { style: { marginBottom: 8 } },
+        h("div", { className: "hint", style: { marginBottom: 6 } }, "Já salvas:"),
+        existingMediaLoading
+          ? h("div", { className: "hint" }, "Carregando...")
+          : existingMedia.length === 0
+            ? h("div", { className: "hint" }, "Nenhuma referência salva ainda.")
+            : h("div", { className: "media-list" }, existingMedia.map(it =>
+                h("div", { key: it.id, className: "media-item" },
+                  h("div", { className: "media-item-name" }, it.filename),
+                  it.type === "video"
+                    ? h("video", { controls: true, src: existingMediaUrls[it.id], style: { width: "100%", borderRadius: 8, maxHeight: 160 } })
+                    : h("audio", { controls: true, src: existingMediaUrls[it.id], style: { width: "100%" } }),
+                  h("button", { type: "button", className: "icon-btn danger", style: { marginTop: 6 }, onClick: () => removeExistingMedia(it) }, "🗑 Remover")
+                )
+              ))
+      ),
       h("input", { type: "file", accept: "video/*,audio/*", multiple: true, onChange: e => setPendingFiles(pendingFiles.concat(Array.from(e.target.files))) }),
       h("div", { className: "hint" }, "Fica salvo na nuvem (Supabase), vinculado à sua conta — acessível em qualquer dispositivo."),
       uploadError && h("div", { className: "error-msg" }, uploadError),
