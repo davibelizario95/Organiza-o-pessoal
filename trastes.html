@@ -266,6 +266,20 @@ function useGoal(userId) {
 }
 
 // ---------- media (Supabase Storage) ----------
+// Traduz os erros mais comuns do Storage pra algo que explica o que fazer,
+// não só o texto cru em inglês do Supabase.
+function friendlyUploadErrorMessage(err, file) {
+  const msg = (err && err.message) || String(err);
+  if (/exceeded the maximum allowed size/i.test(msg)) {
+    const sizeMb = (file.size / 1024 / 1024).toFixed(1);
+    return `"${file.name}" tem ${sizeMb}MB — passou do limite de tamanho configurado no bucket "media" do Supabase. Aumente o limite em Storage → bucket "media" → Edit bucket → File size limit, ou comprima/corte o vídeo antes de enviar.`;
+  }
+  if (/row-level security/i.test(msg)) {
+    return `Sem permissão pra salvar "${file.name}" (política de segurança do Supabase). Confira as políticas do bucket "media" e da tabela "media".`;
+  }
+  return `"${file.name}" falhou ao enviar: ${msg}`;
+}
+
 async function uploadMedia(file, lickId, userId) {
   const path = userId + "/" + lickId + "/" + uid() + "_" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const { error: upErr } = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
@@ -826,7 +840,7 @@ function LickForm(props) {
         } catch (err) {
           console.error(err);
           stillPending.push(file);
-          setUploadError("Algum arquivo falhou ao enviar: " + (err.message || "erro desconhecido"));
+          setUploadError(friendlyUploadErrorMessage(err, file));
         }
       }
       setPendingFiles(stillPending);
@@ -1059,7 +1073,7 @@ function MediaModal(props) {
     setBusy(true); setError(null);
     for (const file of Array.from(fileList)) {
       try { await uploadMedia(file, lick.id, userId); }
-      catch (err) { console.error(err); setError("Falha ao enviar: " + (err.message || "erro desconhecido")); }
+      catch (err) { console.error(err); setError(friendlyUploadErrorMessage(err, file)); }
     }
     await refresh();
     setBusy(false);
