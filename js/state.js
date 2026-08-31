@@ -214,3 +214,14 @@ export async function removeMenuCategory(id) {
   if (!state.profile) return;
   return store.deleteMenuCategory(state.profile.id, id);
 }
+// Renomeia a categoria E reetiqueta todo item que já usava o nome antigo —
+// senão o item "some" do menu (a tag antiga fica órfã, sem tile nenhum).
+export async function renameMenuCategory(id, oldName, newName) {
+  if (!state.profile) return;
+  await store.updateMenuCategory(state.profile.id, id, { nome: newName });
+  const affected = state.items.filter((i) => (i.tags || []).includes(oldName));
+  for (const item of affected) {
+    const tags = item.tags.map((t) => (t === oldName ? newName : t));
+    await store.updateItem(state.profile.id, item.id, { tags });
+  }
+}

@@ -12,6 +12,14 @@ const DOW = ["S", "T", "Q", "Q", "S", "S", "D"];
 // especial (mostra tudo, sem filtrar por tag nenhuma) — ver
 // MENU_FRENTE_DEFAULTS em frentes.js pra quais frentes abrem em menu.
 
+// Algumas categorias do menu abrem uma página à parte em vez da lista
+// filtrada — hoje só "Guitarra" em Estudo, que leva pro Trastes (app de
+// prática de guitarra, hospedado junto com este mesmo site). Chave em
+// minúsculo pra comparar sem depender de acento/maiúscula.
+const MENU_EXTERNAL_LINKS = {
+  estudo: { guitarra: "./trastes.html" },
+};
+
 export function renderFrenteGeneric(frente) {
   const view = document.getElementById("view");
   const isMenuFrente = frente.key in MENU_FRENTE_DEFAULTS;
@@ -59,7 +67,13 @@ export function renderFrenteGeneric(frente) {
         <span class="menu-tile-label">${escapeHtml(cat)}</span>
         <span class="menu-tile-count">${count ? `${count} pendente${count === 1 ? "" : "s"}` : "Nada pendente"}</span>
       `;
+      const externalUrl = MENU_EXTERNAL_LINKS[frente.key]?.[cat.toLowerCase()];
+      if (externalUrl) tile.title = "Abre em outra página";
       tile.addEventListener("click", () => {
+        if (externalUrl) {
+          window.open(externalUrl, "_blank", "noopener");
+          return;
+        }
         menuCategory = cat;
         render();
       });

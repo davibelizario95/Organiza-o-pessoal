@@ -565,6 +565,22 @@ export async function createMenuCategory(profileId, data) {
   return full;
 }
 
+export async function updateMenuCategory(profileId, id, patch) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { doc, updateDoc } = fb.firestore;
+    await updateDoc(doc(fb.db, "profiles", profileId, "menuCategories", id), patch);
+    return;
+  }
+  const list = readLs(lsMenuCategoriesKey(profileId), []);
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...patch };
+    writeLs(lsMenuCategoriesKey(profileId), list);
+    notifyLocal(lsMenuCategoriesKey(profileId));
+  }
+}
+
 export async function deleteMenuCategory(profileId, id) {
   if (backendMode === "firebase") {
     const fb = await getFirebase();

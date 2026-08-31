@@ -3,6 +3,7 @@ const PRECACHE_URLS = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
+  "./trastes.html",
   "./css/styles.css",
   "./js/app.js",
   "./js/config.js",

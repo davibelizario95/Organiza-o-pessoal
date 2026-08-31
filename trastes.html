@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trastes — diário de prática</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" onerror="document.getElementById('root').innerHTML='<div style=\'padding:24px;font-family:sans-serif;color:#F2EFE6\'>Falha ao carregar a biblioteca <b>React</b> (cdnjs.cloudflare.com). Verifique sua conexão com a internet, desative bloqueadores de anúncio/script para este arquivo, ou tente outro navegador.</div>'"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" onerror="document.getElementById('root').innerHTML='<div style=\'padding:24px;font-family:sans-serif;color:#F2EFE6\'>Falha ao carregar a biblioteca <b>ReactDOM</b> (cdnjs.cloudflare.com). Verifique sua conexão com a internet, desative bloqueadores de anúncio/script para este arquivo, ou tente outro navegador.</div>'"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="document.getElementById('root').innerHTML='<div style=\'padding:24px;font-family:sans-serif;color:#F2EFE6\'>Falha ao carregar a biblioteca <b>Supabase</b> (cdn.jsdelivr.net). Verifique sua conexão com a internet, desative bloqueadores de anúncio/script para este arquivo, ou tente outro navegador.</div>'"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #17201C; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #F2EFE6; }
+  .app { min-height: 100vh; padding: 20px; max-width: 880px; margin: 0 auto; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-emoji { font-size: 22px; }
+  .brand-title { font-family: Georgia, 'Iowan Old Style', serif; font-size: 22px; letter-spacing: 0.5px; }
+  .brand-sub { font-size: 11.5px; color: #9CAA9F; margin-top: -2px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .streak-pill { display: flex; align-items: center; gap: 5px; background: #24312A; border: 1px solid #33413A; border-radius: 999px; padding: 5px 12px; font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 13px; color: #E8A33D; }
+  .user-pill { font-size: 11.5px; color: #9CAA9F; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid #2A362F; padding-bottom: 10px; }
+  .tab-btn { display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid transparent; color: #9CAA9F; padding: 7px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; }
+  .tab-btn.active { background: #24312A; border-color: #E8A33D55; color: #E8A33D; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+  .section-header h2 { font-family: Georgia, serif; font-size: 18px; font-weight: 500; margin: 0; }
+  .empty { color: #9CAA9F; font-size: 13.5px; padding: 22px 4px; text-align: center; border: 1px dashed #33413A; border-radius: 10px; }
+  .primary-btn { display: flex; align-items: center; gap: 6px; background: #E8A33D; color: #17201C; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .ghost-btn { display: flex; align-items: center; gap: 6px; background: transparent; color: #F2EFE6; border: 1px solid #33413A; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .ghost-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 720px) { .kanban { grid-template-columns: 1fr; } .practice-grid { grid-template-columns: 1fr !important; } .form-row { grid-template-columns: 1fr !important; } .stats-row { grid-template-columns: 1fr 1fr !important; } .charts { grid-template-columns: 1fr !important; } }
+  .kanban-col-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; font-weight: 600; }
+  .lick-card { background: #1F2A24; border: 1px solid #2A362F; border-top: 2px solid #33413A; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .lick-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .lick-name { font-size: 14px; font-weight: 600; }
+  .lick-artist { font-size: 12px; color: #9CAA9F; }
+  .diff-badge { font-size: 10.5px; border: 1px solid #33413A; padding: 2px 7px; border-radius: 999px; color: #9CAA9F; white-space: nowrap; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+  .tag { font-size: 11px; background: #24312A; padding: 2px 8px; border-radius: 999px; color: #8AA6C7; }
+  .lick-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: #9CAA9F; margin-bottom: 10px; }
+  .lick-link { color: #8AA6C7; text-decoration: none; }
+  .lick-actions { display: flex; justify-content: space-between; align-items: center; }
+  .status-select { background: transparent; border: 1px solid #33413A; border-radius: 6px; font-size: 11.5px; padding: 3px 6px; }
+  .icon-btns { display: flex; gap: 4px; }
+  .icon-btn { background: transparent; border: 1px solid #33413A; color: #9CAA9F; border-radius: 6px; padding: 5px 8px; cursor: pointer; font-size: 13px; }
+  .icon-btn.danger:hover { color: #D1453D; border-color: #D1453D; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(11,15,13,0.6); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal { background: #1F2A24; border: 1px solid #33413A; border-radius: 12px; padding: 18px; width: 420px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .modal-header h3 { font-family: Georgia, serif; font-weight: 500; margin: 0; }
+  label { display: block; font-size: 11.5px; color: #9CAA9F; margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; background: #17201C; border: 1px solid #33413A; color: #F2EFE6; border-radius: 7px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .lick-select { margin-bottom: 16px; }
+  .practice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .panel { background: #1F2A24; border: 1px solid #2A362F; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .panel.wide { grid-column: 1 / -1; }
+  .panel-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: #9CAA9F; margin-bottom: 10px; }
+  .metronome { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .bpm-display { font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 32px; color: #E8A33D; }
+  .bpm-display span { font-size: 13px; color: #9CAA9F; margin-left: 4px; }
+  .metronome input[type=range] { width: 100%; accent-color: #E8A33D; }
+  .click-btn { display: flex; align-items: center; gap: 6px; background: #24312A; border: 1px solid #33413A; color: #F2EFE6; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+  .click-btn.active { background: #E8A33D; color: #17201C; border-color: #E8A33D; }
+  .hint { font-size: 11px; color: #9CAA9F; margin-top: 6px; }
+  .stopwatch { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .clock { font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 32px; }
+  .record-btn { display: flex; align-items: center; gap: 8px; background: #24312A; border: 1px solid #33413A; color: #F2EFE6; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
+  .record-btn.active { background: #D1453D; color: #F2EFE6; border-color: #D1453D; }
+  .error-msg { color: #D1453D; font-size: 12.5px; margin-bottom: 8px; }
+  .recording-result { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .recording-result audio { height: 32px; }
+  .stars { display: flex; gap: 2px; }
+  .star-btn { background: none; border: none; cursor: pointer; padding: 2px; font-size: 18px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: #1F2A24; border: 1px solid #2A362F; border-radius: 10px; padding: 12px; }
+  .stat-label { font-size: 11px; color: #9CAA9F; display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+  .stat-value { font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 20px; color: #E8A33D; display: flex; align-items: center; }
+  .goal-input { width: 42px !important; padding: 2px 4px !important; margin-left: 2px; font-family: inherit; font-size: 20px !important; color: #E8A33D; display: inline-block; }
+  .fretboard { display: flex; gap: 4px; }
+  .fret { flex: 1; display: flex; justify-content: center; padding: 6px 0; border-bottom: 2px solid #33413A; position: relative; }
+  .fret.marker::after { content: ""; position: absolute; bottom: -7px; width: 5px; height: 5px; border-radius: 50%; background: #33413A; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #2A362F; border: 1px solid #33413A; }
+  .dot.lit { background: #E8A33D; border-color: #E8A33D; box-shadow: 0 0 6px rgba(232,163,61,0.5); }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .chart-label { font-size: 12px; color: #9CAA9F; margin-bottom: 6px; }
+  .chart-axis { display: flex; justify-content: space-between; font-size: 10.5px; color: #9CAA9F; margin-top: 4px; }
+  .dominado-list { list-style: none; padding: 0; margin: 0; }
+  .dominado-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2A362F; font-size: 13px; }
+  .dominado-list li:last-child { border-bottom: none; }
+  .media-list { display: flex; flex-direction: column; gap: 14px; max-height: 340px; overflow-y: auto; }
+  .media-item { border: 1px solid #2A362F; border-radius: 8px; padding: 10px; }
+  .media-item-name { font-size: 12px; color: #9CAA9F; margin-bottom: 6px; word-break: break-all; }
+  .auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .auth-box { background: #1F2A24; border: 1px solid #2A362F; border-radius: 12px; padding: 26px; width: 360px; max-width: 100%; }
+  .auth-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .loading-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #9CAA9F; }
+  .home-quote { font-family: Georgia, 'Iowan Old Style', serif; font-size: 30px; line-height: 1.35; color: #F2EFE6; text-align: center; padding: 40px 10px; }
+  @media (max-width: 720px) { .home-quote { font-size: 22px; padding: 28px 6px; } }
+  .month-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; font-size: 10px; color: #9CAA9F; text-align: center; text-transform: uppercase; letter-spacing: 0.4px; }
+  .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .month-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; font-size: 11px; color: #9CAA9F; border: 1px solid #2A362F; background: #17201C; }
+  .month-cell.empty-cell { border: none; background: transparent; }
+  .month-cell.practiced { background: #24312A; color: #F2EFE6; border-color: #33413A; }
+  .month-cell.dominated { border-color: #E8A33D; box-shadow: 0 0 0 1px #E8A33D inset; }
+  .month-cell.today { outline: 1px dashed #8AA6C7; outline-offset: 1px; }
+  .month-cell-daynum { font-weight: 600; }
+  .month-cell-dot { width: 5px; height: 5px; border-radius: 50%; background: #E8A33D; margin-top: 2px; }
+  .month-legend { display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: #9CAA9F; }
+  .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .legend-dot.practiced { background: #24312A; border: 1px solid #33413A; }
+  .legend-dot.dominated { background: transparent; border: 1px solid #E8A33D; }
+</style>
+</head>
+<body>
+<div id="root"><div style="padding:40px;color:#9CAA9F;font-family:sans-serif;">Carregando...</div></div>
+<script>
+window.addEventListener("error", function (e) {
+  var root = document.getElementById("root");
+  if (root) {
+    root.innerHTML = '<div style="padding:24px;max-width:600px;margin:40px auto;font-family:sans-serif;color:#F2EFE6;background:#1F2A24;border:1px solid #D1453D;border-radius:10px;">'
+      + '<strong>Deu um erro ao carregar o app:</strong><br><br>'
+      + '<code style="white-space:pre-wrap;word-break:break-word;">' + (e.message || e) + '</code>'
+      + '<br><br>Tira um print dessa mensagem e manda pro Claude.</div>';
+  }
+});
+const h = React.createElement;
+const { useState, useEffect, useRef, useMemo } = React;
+
+try {
+
+// ---------- Supabase setup ----------
+const SUPABASE_URL = "https://xzezcllqtvktnemoacyn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6ZXpjbGxxdHZrdG5lbW9hY3luIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTg5NjcsImV4cCI6MjEwMzQzNDk2N30.pcJwXIC3RgtmTPy1T4TOMcLnP0rUlT3e3MZ4VmJT9iA";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ---------- helpers ----------
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 10));
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const fmtDate = (iso) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+const fmtClock = (secs) => {
+  const m = Math.floor(secs / 60).toString().padStart(2, "0");
+  const s = Math.floor(secs % 60).toString().padStart(2, "0");
+  return m + ":" + s;
+};
+const STATUS = {
+  quero: { label: "Quero aprender", color: "#8AA6C7" },
+  praticando: { label: "Praticando", color: "#E8A33D" },
+  dominado: { label: "Dominado", color: "#7BAE7F" },
+};
+const DIFFICULTY = ["Fácil", "Médio", "Difícil"];
+
+// ---------- row <-> app object mapping ----------
+function rowToLick(r) {
+  return { id: r.id, name: r.name, artist: r.artist, difficulty: r.difficulty, tags: r.tags || [], targetBpm: r.target_bpm, link: r.link, notes: r.notes, status: r.status, dominatedAt: r.dominated_at, createdAt: r.created_at };
+}
+function lickToRow(l, userId) {
+  return { id: l.id, user_id: userId, name: l.name, artist: l.artist || null, difficulty: l.difficulty || null, tags: l.tags || [], target_bpm: l.targetBpm || null, link: l.link || null, notes: l.notes || null, status: l.status || "quero", dominated_at: l.dominatedAt || null };
+}
+function rowToSession(r) {
+  return { id: r.id, lickId: r.lick_id, date: r.date, durationSeconds: r.duration_seconds, bpmAchieved: r.bpm_achieved, rating: r.rating, notes: r.notes };
+}
+function sessionToRow(s, userId) {
+  return { id: s.id || uid(), user_id: userId, lick_id: s.lickId, date: s.date, duration_seconds: s.durationSeconds || 0, bpm_achieved: s.bpmAchieved || null, rating: s.rating || null, notes: s.notes || null };
+}
+
+// ---------- data hooks ----------
+function useLicks(userId) {
+  const [licks, setLicks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase.from("licks").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    if (error) console.error(error);
+    setLicks(data ? data.map(rowToLick) : []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, [userId]);
+  async function upsert(lick) {
+    const row = lickToRow(Object.assign({ id: lick.id || uid() }, lick), userId);
+    const { error } = await supabase.from("licks").upsert(row);
+    if (error) console.error(error);
+    await load();
+  }
+  async function remove(id) {
+    const { data: mediaRows } = await supabase.from("media").select("storage_path").eq("lick_id", id);
+    if (mediaRows && mediaRows.length) {
+      await supabase.storage.from("media").remove(mediaRows.map(m => m.storage_path));
+    }
+    await supabase.from("licks").delete().eq("id", id);
+    await load();
+  }
+  return { licks, loading, upsert, remove, reload: load };
+}
+
+function useSessions(userId) {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase.from("sessions").select("*").eq("user_id", userId).order("date", { ascending: false });
+    if (error) console.error(error);
+    setSessions(data ? data.map(rowToSession) : []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, [userId]);
+  async function add(session) {
+    const row = sessionToRow(session, userId);
+    const { error } = await supabase.from("sessions").insert(row);
+    if (error) console.error(error);
+    await load();
+  }
+  return { sessions, loading, add, reload: load };
+}
+
+function useGoal(userId) {
+  const [goal, setGoalState] = useState(3);
+  useEffect(() => {
+    supabase.from("settings").select("weekly_goal").eq("user_id", userId).maybeSingle().then(({ data }) => {
+      if (data) setGoalState(data.weekly_goal);
+    });
+  }, [userId]);
+  async function setGoal(next) {
+    setGoalState(next);
+    await supabase.from("settings").upsert({ user_id: userId, weekly_goal: next });
+  }
+  return [goal, setGoal];
+}
+
+// ---------- media (Supabase Storage) ----------
+async function uploadMedia(file, lickId, userId) {
+  const path = userId + "/" + lickId + "/" + uid() + "_" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const { error: upErr } = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
+  if (upErr) throw upErr;
+  const { error } = await supabase.from("media").insert({
+    id: uid(), user_id: userId, lick_id: lickId, storage_path: path,
+    filename: file.name, mime_type: file.type, type: file.type.indexOf("video") === 0 ? "video" : "audio",
+  });
+  if (error) throw error;
+}
+async function fetchMediaForLick(lickId) {
+  const { data, error } = await supabase.from("media").select("*").eq("lick_id", lickId).order("created_at", { ascending: true });
+  if (error) { console.error(error); return []; }
+  return data;
+}
+async function getMediaSignedUrl(path) {
+  const { data, error } = await supabase.storage.from("media").createSignedUrl(path, 3600);
+  if (error) { console.error(error); return null; }
+  return data.signedUrl;
+}
+async function deleteMediaItem(item) {
+  await supabase.storage.from("media").remove([item.storage_path]);
+  await supabase.from("media").delete().eq("id", item.id);
+}
+
+// ---------- metronome / stopwatch / recorder (unchanged, local only) ----------
+function useMetronome(initialBpm) {
+  const [bpm, setBpm] = useState(initialBpm || 100);
+  const [playing, setPlaying] = useState(false);
+  const ctxRef = useRef(null);
+  function click() {
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = 1400;
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.04);
+  }
+  useEffect(() => {
+    if (!playing) return;
+    if (!ctxRef.current) ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    click();
+    const id = setInterval(click, 60000 / bpm);
+    return () => clearInterval(id);
+  }, [playing, bpm]);
+  return { bpm, setBpm, playing, toggle: () => setPlaying(p => !p) };
+}
+function useStopwatch() {
+  const [seconds, setSeconds] = useState(0);
+  const [running, setRunning] = useState(false);
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => setSeconds(s => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [running]);
+  return { seconds, running, start: () => setRunning(true), pause: () => setRunning(false), reset: () => { setSeconds(0); setRunning(false); } };
+}
+function useRecorder() {
+  const [recording, setRecording] = useState(false);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [error, setError] = useState(null);
+  const mrRef = useRef(null);
+  const chunksRef = useRef([]);
+  async function start() {
+    setError(null); setAudioUrl(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = e => chunksRef.current.push(e.data);
+      mr.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setAudioUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mr.start(); mrRef.current = mr; setRecording(true);
+    } catch (e) { setError("Não consegui acessar o microfone. Verifique a permissão do navegador."); }
+  }
+  function stop() { mrRef.current && mrRef.current.stop(); setRecording(false); }
+  function reset() { setAudioUrl(null); setError(null); }
+  return { recording, audioUrl, error, start, stop, reset };
+}
+
+function computeStreak(sessions) {
+  const days = new Set(sessions.map(s => s.date.slice(0, 10)));
+  let cursor = new Date();
+  const key = () => cursor.toISOString().slice(0, 10);
+  if (!days.has(key())) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (days.has(key())) { streak++; cursor.setDate(cursor.getDate() - 1); }
+  return streak;
+}
+function last14Days(sessions) {
+  const days = new Set(sessions.map(s => s.date.slice(0, 10)));
+  const arr = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = d.toISOString().slice(0, 10);
+    arr.push({ key: k, practiced: days.has(k), dayNum: 14 - i });
+  }
+  return arr;
+}
+
+function MiniLineChart({ data, dataKey, color, yDomain }) {
+  const width = 400, height = 140;
+  const valid = data.filter(d => d[dataKey] !== null && d[dataKey] !== undefined);
+  if (valid.length === 0) return h("div", { className: "empty" }, "Sem dados suficientes ainda.");
+  const values = valid.map(d => d[dataKey]);
+  const minV = yDomain ? yDomain[0] : Math.min(...values);
+  const maxV = yDomain ? yDomain[1] : Math.max(...values);
+  const range = (maxV - minV) || 1;
+  const stepX = data.length > 1 ? width / (data.length - 1) : width;
+  const points = data.map((d, i) => {
+    const val = d[dataKey];
+    const y = (val === null || val === undefined) ? null : height - ((val - minV) / range) * (height - 16) - 8;
+    return { x: i * stepX, y, val, label: d.date };
+  });
+  const polyPoints = points.filter(p => p.y !== null).map(p => p.x + "," + p.y).join(" ");
+  return h("div", null,
+    h("svg", { viewBox: "0 0 " + width + " " + height, style: { width: "100%", height: 140, display: "block" }, preserveAspectRatio: "none" },
+      h("polyline", { points: polyPoints, fill: "none", stroke: color, strokeWidth: 2 }),
+      points.filter(p => p.y !== null).map((p, i) => h("circle", { key: i, cx: p.x, cy: p.y, r: 3, fill: color }))
+    ),
+    h("div", { className: "chart-axis" },
+      h("span", null, points[0] ? points[0].label : ""),
+      h("span", null, points[points.length - 1] ? points[points.length - 1].label : "")
+    )
+  );
+}
+
+// ---------- Auth ----------
+function AuthScreen() {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [info, setInfo] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError(null); setInfo(null); setBusy(true);
+    try {
+      if (mode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setInfo("Conta criada! Se a confirmação por e-mail estiver ativa no seu projeto, confirme o e-mail antes de entrar.");
+      }
+    } catch (err) {
+      setError(err.message || "Erro ao autenticar.");
+    }
+    setBusy(false);
+  }
+
+  return h("div", { className: "auth-screen" },
+    h("div", { className: "auth-box" },
+      h("div", { className: "brand", style: { justifyContent: "center", marginBottom: 18 } },
+        h("span", { className: "brand-emoji" }, "🎸"),
+        h("div", null, h("div", { className: "brand-title" }, "Trastes"), h("div", { className: "brand-sub" }, "seu diário de prática"))
+      ),
+      h("div", { className: "auth-tabs" },
+        h("button", { type: "button", className: "tab-btn" + (mode === "login" ? " active" : ""), onClick: () => setMode("login") }, "Entrar"),
+        h("button", { type: "button", className: "tab-btn" + (mode === "signup" ? " active" : ""), onClick: () => setMode("signup") }, "Criar conta")
+      ),
+      h("form", { onSubmit: submit },
+        h("label", null, "E-mail"),
+        h("input", { type: "email", value: email, onChange: e => setEmail(e.target.value), required: true }),
+        h("label", null, "Senha"),
+        h("input", { type: "password", value: password, onChange: e => setPassword(e.target.value), required: true, minLength: 6 }),
+        error && h("div", { className: "error-msg", style: { marginTop: 10 } }, error),
+        info && h("div", { className: "hint", style: { marginTop: 10 } }, info),
+        h("button", { className: "primary-btn", type: "submit", disabled: busy, style: { width: "100%", justifyContent: "center", marginTop: 14 } },
+          busy ? "Aguarde..." : (mode === "login" ? "Entrar" : "Criar conta"))
+      )
+    )
+  );
+}
+
+// ---------- root: gates the app behind auth ----------
+function Root() {
+  const [session, setSession] = useState(undefined);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session || null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => setSession(sess));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+  if (session === undefined) return h("div", { className: "loading-screen" }, "Carregando...");
+  if (!session) return h(AuthScreen);
+  return h(App, { userId: session.user.id, userEmail: session.user.email });
+}
+
+// ---------- main app ----------
+function App(props) {
+  const { userId, userEmail } = props;
+  const { licks, loading: licksLoading, upsert: upsertLick, remove: removeLick } = useLicks(userId);
+  const { sessions, loading: sessionsLoading, add: addSession } = useSessions(userId);
+  const [goal, setGoal] = useGoal(userId);
+  const [tab, setTab] = useState("home");
+  const [editingLick, setEditingLick] = useState(null);
+  const [activeLickId, setActiveLickId] = useState(null);
+  const [mediaModalLick, setMediaModalLick] = useState(null);
+  const [mediaVersion, setMediaVersion] = useState(0);
+
+  const ready = !licksLoading && !sessionsLoading;
+  const activeLick = licks.find(l => l.id === activeLickId) || null;
+  const openMedia = (lick) => setMediaModalLick(lick);
+  const closeMedia = () => { setMediaModalLick(null); setMediaVersion(v => v + 1); };
+
+  function saveLick(data) {
+    const prev = licks.find(l => l.id === data.id);
+    const wasNotDominado = !prev || prev.status !== "dominado";
+    const dominatedAt = (data.status === "dominado" && wasNotDominado) ? new Date().toISOString() : (prev ? prev.dominatedAt : null);
+    upsertLick(Object.assign({}, data, { dominatedAt }));
+    setEditingLick(null);
+  }
+  function deleteLick(id) {
+    removeLick(id);
+    if (activeLickId === id) setActiveLickId(null);
+  }
+  function changeStatus(id, status) {
+    const lick = licks.find(l => l.id === id);
+    saveLick(Object.assign({}, lick, { status }));
+  }
+  function saveSession(session) { addSession(session); }
+
+  const streak = useMemo(() => computeStreak(sessions), [sessions]);
+  const days14 = useMemo(() => last14Days(sessions), [sessions]);
+  const sessionsThisWeek = useMemo(() => sessions.filter(s => Date.now() - new Date(s.date).getTime() <= 7 * 24 * 3600 * 1000).length, [sessions]);
+
+  return h("div", { className: "app" },
+    h("header", { className: "topbar" },
+      h("div", { className: "brand" },
+        h("span", { className: "brand-emoji" }, "🎸"),
+        h("div", null, h("div", { className: "brand-title" }, "Trastes"), h("div", { className: "brand-sub" }, "seu diário de prática"))
+      ),
+      h("div", { className: "topbar-right" },
+        h("span", { className: "user-pill" }, userEmail),
+        h("div", { className: "streak-pill" }, "🔥 ", streak),
+        h("button", { className: "ghost-btn", onClick: () => supabase.auth.signOut() }, "Sair")
+      )
+    ),
+    h("nav", { className: "tabs" },
+      [{ id: "home", label: "Início" }, { id: "library", label: "Biblioteca" }, { id: "practice", label: "Praticar" }, { id: "progress", label: "Evolução" }].map(t =>
+        h("button", { key: t.id, className: "tab-btn" + (tab === t.id ? " active" : ""), onClick: () => setTab(t.id) }, t.label)
+      )
+    ),
+    h("main", null,
+      !ready && h("div", { className: "empty" }, "Carregando seus dados..."),
+      ready && tab === "home" && h(HomeView, { licks, sessions }),
+      ready && tab === "library" && h(LibraryView, {
+        licks, onNew: () => setEditingLick({}), onEdit: l => setEditingLick(l),
+        onDelete: deleteLick, onStatusChange: changeStatus,
+        onPractice: l => { setActiveLickId(l.id); setTab("practice"); },
+        onOpenMedia: openMedia, mediaVersion
+      }),
+      ready && tab === "practice" && h(PracticeView, {
+        licks, activeLick, setActiveLickId, onSaveSession: saveSession, onStatusChange: changeStatus,
+        onOpenMedia: openMedia, mediaVersion
+      }),
+      ready && tab === "progress" && h(ProgressView, {
+        licks, sessions, days14, goal, setGoal, sessionsThisWeek, streak
+      })
+    ),
+    editingLick !== null && h(LickForm, { initial: editingLick, userId, onCancel: () => setEditingLick(null), onSave: saveLick }),
+    mediaModalLick && h(MediaModal, { lick: mediaModalLick, userId, onClose: closeMedia })
+  );
+}
+
+const MOTIVATIONAL_PHRASES = [
+  "Cada traste dominado é um passo mais perto da sua voz no instrumento.",
+  "Prática lenta e correta bate velocidade e errada, sempre.",
+  "Hoje é um bom dia pra travar num lick e sair dele mais forte.",
+  "Consistência vence talento quando talento não pratica.",
+  "Seus dedos lembram do que você repete, não do que você deseja.",
+  "Um lick por dia muda o que você toca daqui a um ano.",
+  "O metrônomo não mente — e por isso ele te faz melhor.",
+  "Ninguém nasceu tocando rápido. Todo mundo começou devagar.",
+  "A guitarra recompensa quem volta todo dia, não quem se esforça uma vez só.",
+  "Erre com o metrônomo ligado — é aí que o progresso mora.",
+  "Cada sessão de hoje é o motivo de tocar melhor amanhã.",
+  "Não é sobre tocar perfeito, é sobre tocar de novo.",
+  "O lick mais difícil de hoje é o aquecimento de daqui a um mês.",
+  "Toque pouco, mas toque todo dia.",
+  "Sua evolução não é linear — continue mesmo nos dias travados.",
+];
+
+function HomeView(props) {
+  const { licks, sessions } = props;
+  const [phrase] = useState(() => MOTIVATIONAL_PHRASES[Math.floor(Math.random() * MOTIVATIONAL_PHRASES.length)]);
+  return h("div", null,
+    h("div", { className: "home-quote" }, phrase),
+    h("div", { className: "panel" },
+      h(MonthCalendar, { licks, sessions })
+    )
+  );
+}
+
+function MonthCalendar(props) {
+  const { licks, sessions } = props;
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth();
+  const monthKey = year + "-" + String(month + 1).padStart(2, "0");
+  const monthLabel = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startWeekday = firstDay.getDay();
+  const practicedDays = new Set(sessions.map(s => s.date.slice(0, 10)));
+  const dominatedByDay = {};
+  licks.forEach(l => {
+    if (l.dominatedAt && l.dominatedAt.slice(0, 7) === monthKey) {
+      const d = l.dominatedAt.slice(0, 10);
+      (dominatedByDay[d] = dominatedByDay[d] || []).push(l.name);
+    }
+  });
+  const today = todayStr();
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = monthKey + "-" + String(d).padStart(2, "0");
+    cells.push({ day: d, key, practiced: practicedDays.has(key), dominated: !!dominatedByDay[key], names: dominatedByDay[key] || [], isToday: key === today });
+  }
+  const weekdayLabels = ["D", "S", "T", "Q", "Q", "S", "S"];
+  const dominatedThisMonth = Object.keys(dominatedByDay).sort().flatMap(d => dominatedByDay[d].map(name => ({ date: d, name })));
+
+  return h("div", null,
+    h("div", { className: "panel-title" }, "Linha do tempo — " + monthLabel),
+    h("div", { className: "month-weekdays" }, weekdayLabels.map((w, i) => h("div", { key: i }, w))),
+    h("div", { className: "month-grid" }, cells.map((c, i) =>
+      c === null
+        ? h("div", { key: i, className: "month-cell empty-cell" })
+        : h("div", {
+            key: i,
+            className: "month-cell" + (c.practiced ? " practiced" : "") + (c.dominated ? " dominated" : "") + (c.isToday ? " today" : ""),
+            title: c.names.length ? c.names.join(", ") : undefined
+          },
+            h("span", { className: "month-cell-daynum" }, c.day),
+            c.practiced && h("span", { className: "month-cell-dot" })
+          )
+    )),
+    h("div", { className: "month-legend" },
+      h("span", null, h("span", { className: "legend-dot practiced" }), " praticou"),
+      h("span", null, h("span", { className: "legend-dot dominated" }), " lick dominado")
+    ),
+    dominatedThisMonth.length > 0 && h("div", { style: { marginTop: 14 } },
+      h("div", { className: "hint", style: { marginBottom: 6 } }, "Dominados este mês:"),
+      h("ul", { className: "dominado-list" }, dominatedThisMonth.map((it, i) =>
+        h("li", { key: i }, h("span", null, it.name), h("span", { className: "hint" }, fmtDate(it.date)))
+      ))
+    )
+  );
+}
+
+function LickCard(props) {
+  const { lick, onEdit, onDelete, onStatusChange, onPractice, onOpenMedia } = props;
+  const [mediaCount, setMediaCount] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchMediaForLick(lick.id).then(items => { if (!cancelled) setMediaCount(items.length); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [lick.id]);
+  return h("div", { className: "lick-card" },
+    h("div", { className: "lick-card-top" },
+      h("div", null,
+        h("div", { className: "lick-name" }, lick.name),
+        lick.artist && h("div", { className: "lick-artist" }, lick.artist)
+      ),
+      h("span", { className: "diff-badge" }, lick.difficulty)
+    ),
+    lick.tags && lick.tags.length > 0 && h("div", { className: "tags" }, lick.tags.map(t => h("span", { key: t, className: "tag" }, t))),
+    h("div", { className: "lick-meta" },
+      h("span", null, lick.targetBpm ? ("alvo " + lick.targetBpm + " BPM") : "sem BPM alvo"),
+      lick.link && h("a", { href: lick.link, target: "_blank", rel: "noreferrer", className: "lick-link" }, "referência ↗")
+    ),
+    h("div", { className: "lick-actions" },
+      h("select", { value: lick.status, onChange: e => onStatusChange(lick.id, e.target.value), className: "status-select", style: { color: STATUS[lick.status].color } },
+        Object.keys(STATUS).map(k => h("option", { key: k, value: k }, STATUS[k].label))),
+      h("div", { className: "icon-btns" },
+        h("button", { className: "icon-btn", onClick: () => onOpenMedia(lick), title: "Referências (vídeo/áudio)" }, "🎬" + (mediaCount ? " " + mediaCount : "")),
+        h("button", { className: "icon-btn", onClick: () => onPractice(lick), title: "Praticar" }, "▶"),
+        h("button", { className: "icon-btn", onClick: () => onEdit(lick), title: "Editar" }, "✎"),
+        h("button", { className: "icon-btn danger", onClick: () => onDelete(lick.id), title: "Excluir" }, "🗑")
+      )
+    )
+  );
+}
+
+function LibraryView(props) {
+  const { licks, onNew, onEdit, onDelete, onStatusChange, onPractice, onOpenMedia, mediaVersion } = props;
+  const columns = ["quero", "praticando", "dominado"];
+  return h("div", null,
+    h("div", { className: "section-header" },
+      h("h2", null, "Biblioteca de licks"),
+      h("button", { className: "primary-btn", onClick: onNew }, "+ Novo lick")
+    ),
+    licks.length === 0
+      ? h("div", { className: "empty" }, "Nenhum lick cadastrado ainda. Adicione o primeiro para começar a praticar.")
+      : h("div", { className: "kanban" }, columns.map(col =>
+          h("div", { key: col },
+            h("div", { className: "kanban-col-title", style: { color: STATUS[col].color } }, STATUS[col].label + " · " + licks.filter(l => l.status === col).length),
+            licks.filter(l => l.status === col).map(l =>
+              h(LickCard, { key: l.id + "-" + mediaVersion, lick: l, onEdit, onDelete, onStatusChange, onPractice, onOpenMedia })
+            )
+          )
+        ))
+  );
+}
+
+function LickForm(props) {
+  const { initial, userId, onCancel, onSave } = props;
+  const isEdit = !!initial.id;
+  const [id] = useState(() => initial.id || uid());
+  const [name, setName] = useState(initial.name || "");
+  const [artist, setArtist] = useState(initial.artist || "");
+  const [difficulty, setDifficulty] = useState(initial.difficulty || "Médio");
+  const [tags, setTags] = useState((initial.tags || []).join(", "));
+  const [targetBpm, setTargetBpm] = useState(initial.targetBpm || "");
+  const [link, setLink] = useState(initial.link || "");
+  const [notes, setNotes] = useState(initial.notes || "");
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    setUploadError(null);
+    const lickData = Object.assign({}, initial, {
+      id, name: name.trim(), artist: artist.trim(), difficulty,
+      tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+      targetBpm: targetBpm ? Number(targetBpm) : null,
+      link: link.trim(), notes: notes.trim(),
+    });
+    for (const file of pendingFiles) {
+      try { await uploadMedia(file, id, userId); }
+      catch (err) { console.error(err); setUploadError("Algum arquivo falhou ao enviar: " + (err.message || "erro desconhecido")); }
+    }
+    onSave(lickData);
+  }
+  function removePendingFile(idx) { setPendingFiles(pendingFiles.filter((_, i) => i !== idx)); }
+
+  return h("div", { className: "modal-overlay", onClick: onCancel },
+    h("form", { className: "modal", onClick: e => e.stopPropagation(), onSubmit: submit },
+      h("div", { className: "modal-header" },
+        h("h3", null, isEdit ? "Editar lick" : "Novo lick"),
+        h("button", { type: "button", className: "icon-btn", onClick: onCancel }, "✕")
+      ),
+      h("label", null, "Nome do lick"),
+      h("input", { value: name, onChange: e => setName(e.target.value), placeholder: "ex: Bend duplo na corda B", autoFocus: true }),
+      h("label", null, "Artista / música de origem"),
+      h("input", { value: artist, onChange: e => setArtist(e.target.value), placeholder: "ex: John Mayer - Neon" }),
+      h("div", { className: "form-row" },
+        h("div", null, h("label", null, "Dificuldade"),
+          h("select", { value: difficulty, onChange: e => setDifficulty(e.target.value) }, DIFFICULTY.map(d => h("option", { key: d, value: d }, d)))),
+        h("div", null, h("label", null, "BPM alvo"),
+          h("input", { type: "number", value: targetBpm, onChange: e => setTargetBpm(e.target.value), placeholder: "120" }))
+      ),
+      h("label", null, "Tags (separadas por vírgula)"),
+      h("input", { value: tags, onChange: e => setTags(e.target.value), placeholder: "legato, bend, sweep picking" }),
+      h("label", null, "Link de referência (tab, vídeo)"),
+      h("input", { value: link, onChange: e => setLink(e.target.value), placeholder: "https://..." }),
+      h("label", null, "Vídeo ou áudio de referência (opcional)"),
+      h("input", { type: "file", accept: "video/*,audio/*", multiple: true, onChange: e => setPendingFiles(pendingFiles.concat(Array.from(e.target.files))) }),
+      h("div", { className: "hint" }, "Fica salvo na nuvem (Supabase), vinculado à sua conta — acessível em qualquer dispositivo."),
+      uploadError && h("div", { className: "error-msg" }, uploadError),
+      pendingFiles.length > 0 && h("div", { className: "media-list", style: { marginTop: 8 } }, pendingFiles.map((f, i) =>
+        h("div", { key: i, className: "media-item" },
+          h("div", { className: "media-item-name" }, f.name),
+          h("button", { type: "button", className: "icon-btn danger", onClick: () => removePendingFile(i) }, "🗑 Remover")
+        ))),
+      h("label", null, "Notas"),
+      h("textarea", { value: notes, onChange: e => setNotes(e.target.value), rows: 2, placeholder: "observações gerais sobre o lick" }),
+      h("div", { className: "modal-actions" },
+        h("button", { type: "button", className: "ghost-btn", onClick: onCancel }, "Cancelar"),
+        h("button", { type: "submit", className: "primary-btn", disabled: saving }, saving ? "Salvando..." : "Salvar")
+      )
+    )
+  );
+}
+
+function StarRating(props) {
+  const { value, onChange } = props;
+  return h("div", { className: "stars" }, [1, 2, 3, 4, 5].map(n =>
+    h("button", { type: "button", key: n, className: "star-btn", onClick: () => onChange(n) }, n <= value ? "★" : "☆")));
+}
+
+function PracticeView(props) {
+  const { licks, activeLick, setActiveLickId, onSaveSession, onStatusChange, onOpenMedia, mediaVersion } = props;
+  const metronome = useMetronome(activeLick ? activeLick.targetBpm : 100);
+  const stopwatch = useStopwatch();
+  const recorder = useRecorder();
+  const [bpmAchieved, setBpmAchieved] = useState("");
+  const [rating, setRating] = useState(0);
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    stopwatch.reset(); recorder.reset();
+    setBpmAchieved(activeLick ? (activeLick.targetBpm || "") : "");
+    setRating(0); setNotes("");
+  }, [activeLick && activeLick.id]);
+
+  const dominados = licks.filter(l => l.status === "dominado");
+  function pickWarmup() {
+    if (dominados.length === 0) return;
+    setActiveLickId(dominados[Math.floor(Math.random() * dominados.length)].id);
+  }
+  function saveSession() {
+    if (!activeLick) return;
+    onSaveSession({ lickId: activeLick.id, date: new Date().toISOString(), durationSeconds: stopwatch.seconds, bpmAchieved: bpmAchieved ? Number(bpmAchieved) : null, rating: rating || null, notes: notes.trim() });
+    stopwatch.reset(); recorder.reset(); setRating(0); setNotes("");
+  }
+
+  return h("div", null,
+    h("div", { className: "section-header" },
+      h("h2", null, "Sessão de prática"),
+      h("button", { className: "ghost-btn", onClick: pickWarmup, disabled: dominados.length === 0 }, "🔀 Aquecimento")
+    ),
+    h("label", null, "Lick da sessão"),
+    h("select", { className: "lick-select", value: activeLick ? activeLick.id : "", onChange: e => setActiveLickId(e.target.value || null) },
+      h("option", { value: "" }, "Selecione um lick..."),
+      licks.map(l => h("option", { key: l.id, value: l.id }, l.name + (l.artist ? " — " + l.artist : "") + " (" + STATUS[l.status].label + ")"))
+    ),
+    !activeLick && h("div", { className: "empty" }, licks.length === 0 ? "Cadastre um lick na Biblioteca para começar a praticar." : "Escolha um lick acima para iniciar a sessão."),
+    activeLick && h("div", { className: "practice-grid" },
+      h("div", { className: "panel" },
+        h("div", { className: "panel-title" }, "Metrônomo"),
+        h("div", { className: "metronome" },
+          h("div", { className: "bpm-display" }, metronome.bpm, h("span", null, " BPM")),
+          h("input", { type: "range", min: "40", max: "220", value: metronome.bpm, onChange: e => metronome.setBpm(Number(e.target.value)) }),
+          h("button", { className: "click-btn" + (metronome.playing ? " active" : ""), onClick: metronome.toggle }, metronome.playing ? "⏹ Parar" : "▶ Tocar clique"),
+          activeLick.targetBpm && h("div", { className: "hint" }, "alvo: " + activeLick.targetBpm + " BPM")
+        )
+      ),
+      h("div", { className: "panel" },
+        h("div", { className: "panel-title" }, "Tempo de prática"),
+        h("div", { className: "stopwatch" },
+          h("div", { className: "clock" }, fmtClock(stopwatch.seconds)),
+          !stopwatch.running ? h("button", { className: "primary-btn", onClick: stopwatch.start }, "▶ Iniciar") : h("button", { className: "ghost-btn", onClick: stopwatch.pause }, "⏸ Pausar")
+        )
+      ),
+      h("div", { className: "panel wide" },
+        h("div", { className: "panel-title" }, "Gravação"),
+        recorder.error && h("div", { className: "error-msg" }, recorder.error),
+        !recorder.audioUrl
+          ? h("button", { className: "record-btn" + (recorder.recording ? " active" : ""), onClick: recorder.recording ? recorder.stop : recorder.start }, recorder.recording ? "⏹ Parar gravação" : "🎤 Gravar")
+          : h("div", { className: "recording-result" },
+              h("audio", { controls: true, src: recorder.audioUrl }),
+              h("a", { className: "ghost-btn", href: recorder.audioUrl, download: activeLick.name.replace(/\s+/g, "_") + "_" + todayStr() + ".webm" }, "⬇ Baixar"),
+              h("button", { className: "ghost-btn", onClick: recorder.reset }, "Regravar")
+            ),
+        h("div", { className: "hint" }, "Só o histórico da sessão fica salvo — essa gravação de prática não é armazenada. Baixe se quiser guardar.")
+      ),
+      h("div", { className: "panel wide" },
+        h("div", { className: "panel-title" }, "Avaliação da sessão"),
+        h("div", { className: "form-row" },
+          h("div", null, h("label", null, "BPM alcançado"), h("input", { type: "number", value: bpmAchieved, onChange: e => setBpmAchieved(e.target.value), placeholder: "ex: 110" })),
+          h("div", null, h("label", null, "Autoavaliação"), h(StarRating, { value: rating, onChange: setRating }))
+        ),
+        h("label", null, "Observações"),
+        h("textarea", { rows: 2, value: notes, onChange: e => setNotes(e.target.value), placeholder: "ex: travei na descida, bend ficou mais limpo" }),
+        h("div", { className: "modal-actions" },
+          activeLick.status !== "dominado" && h("button", { type: "button", className: "ghost-btn", onClick: () => onStatusChange(activeLick.id, "dominado") }, "Marcar como dominado"),
+          h("button", { className: "primary-btn", onClick: saveSession }, "Salvar sessão")
+        )
+      ),
+      h(ReferencePanel, { lick: activeLick, onOpenMedia, mediaVersion })
+    )
+  );
+}
+
+function ReferencePanel(props) {
+  const { lick, onOpenMedia, mediaVersion } = props;
+  const [items, setItems] = useState([]);
+  const [urls, setUrls] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    fetchMediaForLick(lick.id).then(async list => {
+      if (cancelled) return;
+      setItems(list);
+      const urlMap = {};
+      for (const it of list) urlMap[it.id] = await getMediaSignedUrl(it.storage_path);
+      if (!cancelled) setUrls(urlMap);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [lick.id, mediaVersion]);
+
+  return h("div", { className: "panel wide" },
+    h("div", { className: "panel-title" }, "Referências (vídeo/áudio)"),
+    h("button", { className: "ghost-btn", onClick: () => onOpenMedia(lick) }, "📎 Gerenciar referências"),
+    items.length === 0
+      ? h("div", { className: "empty", style: { marginTop: 10 } }, "Nenhuma referência anexada a este lick ainda.")
+      : h("div", { className: "media-list", style: { marginTop: 10 } }, items.map(it =>
+          h("div", { key: it.id, className: "media-item" },
+            h("div", { className: "media-item-name" }, it.filename),
+            it.type === "video"
+              ? h("video", { controls: true, src: urls[it.id], style: { width: "100%", borderRadius: 8, maxHeight: 220 } })
+              : h("audio", { controls: true, src: urls[it.id], style: { width: "100%" } })
+          )))
+  );
+}
+
+function MediaModal(props) {
+  const { lick, userId, onClose } = props;
+  const [items, setItems] = useState([]);
+  const [urls, setUrls] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function refresh() {
+    const list = await fetchMediaForLick(lick.id);
+    setItems(list);
+    const urlMap = {};
+    for (const it of list) urlMap[it.id] = await getMediaSignedUrl(it.storage_path);
+    setUrls(urlMap);
+  }
+  useEffect(() => { refresh().then(() => setLoading(false)); }, [lick.id]);
+
+  async function handleFiles(fileList) {
+    setBusy(true); setError(null);
+    for (const file of Array.from(fileList)) {
+      try { await uploadMedia(file, lick.id, userId); }
+      catch (err) { console.error(err); setError("Falha ao enviar: " + (err.message || "erro desconhecido")); }
+    }
+    await refresh();
+    setBusy(false);
+  }
+  async function handleDelete(item) {
+    await deleteMediaItem(item);
+    await refresh();
+  }
+
+  return h("div", { className: "modal-overlay", onClick: onClose },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("div", { className: "modal-header" },
+        h("h3", null, "Referências — " + lick.name),
+        h("button", { className: "icon-btn", onClick: onClose }, "✕")
+      ),
+      h("label", null, "Adicionar vídeo ou áudio do seu dispositivo"),
+      h("input", { type: "file", accept: "video/*,audio/*", multiple: true, disabled: busy, onChange: e => handleFiles(e.target.files) }),
+      h("div", { className: "hint" }, "Salvo na nuvem, vinculado à sua conta. Prefira clipes curtos; arquivos grandes demoram mais para enviar."),
+      error && h("div", { className: "error-msg" }, error),
+      loading ? h("div", { className: "empty", style: { marginTop: 12 } }, "Carregando...")
+        : items.length === 0 ? h("div", { className: "empty", style: { marginTop: 12 } }, "Nenhuma referência ainda.")
+        : h("div", { className: "media-list", style: { marginTop: 12 } }, items.map(it =>
+            h("div", { key: it.id, className: "media-item" },
+              h("div", { className: "media-item-name" }, it.filename),
+              it.type === "video"
+                ? h("video", { controls: true, src: urls[it.id], style: { width: "100%", borderRadius: 8, maxHeight: 260 } })
+                : h("audio", { controls: true, src: urls[it.id], style: { width: "100%" } }),
+              h("div", { style: { marginTop: 6 } }, h("button", { className: "icon-btn danger", onClick: () => handleDelete(it) }, "🗑 Remover"))
+            )))
+    )
+  );
+}
+
+function Fretboard(props) {
+  const markerPositions = new Set([3, 5, 7, 9, 12]);
+  return h("div", { className: "fretboard" }, props.days14.map(d =>
+    h("div", { key: d.key, className: "fret" + (markerPositions.has(d.dayNum) ? " marker" : "") },
+      h("div", { className: "dot" + (d.practiced ? " lit" : ""), title: d.key }))));
+}
+
+function ProgressView(props) {
+  const { licks, sessions, days14, goal, setGoal, sessionsThisWeek, streak } = props;
+  const [selectedId, setSelectedId] = useState(licks[0] ? licks[0].id : "");
+  const dominados = licks.filter(l => l.status === "dominado").sort((a, b) => new Date(b.dominatedAt || 0) - new Date(a.dominatedAt || 0));
+  const chartData = useMemo(() => sessions.filter(s => s.lickId === selectedId).slice().sort((a, b) => new Date(a.date) - new Date(b.date)).map(s => ({ date: fmtDate(s.date), bpm: s.bpmAchieved, rating: s.rating })), [sessions, selectedId]);
+  const totalSessions = sessions.length;
+  const totalMinutes = Math.round(sessions.reduce((a, s) => a + (s.durationSeconds || 0), 0) / 60);
+
+  return h("div", null,
+    h("div", { className: "section-header" }, h("h2", null, "Evolução")),
+    h("div", { className: "panel" }, h("div", { className: "panel-title" }, "Últimos 14 dias"), h(Fretboard, { days14 })),
+    h("div", { className: "stats-row" },
+      h("div", { className: "stat-card" }, h("div", { className: "stat-label" }, "🔥 streak"), h("div", { className: "stat-value" }, streak)),
+      h("div", { className: "stat-card" }, h("div", { className: "stat-label" }, "sessões totais"), h("div", { className: "stat-value" }, totalSessions)),
+      h("div", { className: "stat-card" }, h("div", { className: "stat-label" }, "minutos praticados"), h("div", { className: "stat-value" }, totalMinutes)),
+      h("div", { className: "stat-card" }, h("div", { className: "stat-label" }, "licks dominados"), h("div", { className: "stat-value" }, dominados.length))
+    ),
+    h("div", { className: "panel" },
+      h("div", { className: "stat-label" }, "🎯 meta semanal"),
+      h("div", { className: "stat-value" }, sessionsThisWeek, "/",
+        h("input", { type: "number", min: "1", value: goal, onChange: e => setGoal(Number(e.target.value) || 1), className: "goal-input" }),
+        h("span", { style: { fontSize: 12, color: "#9CAA9F", marginLeft: 8 } }, "sessões esta semana"))
+    ),
+    licks.length > 0 && h("div", { className: "panel" },
+      h("div", { className: "panel-title" }, "Progresso por lick"),
+      h("select", { className: "lick-select", value: selectedId, onChange: e => setSelectedId(e.target.value) }, licks.map(l => h("option", { key: l.id, value: l.id }, l.name))),
+      chartData.length === 0
+        ? h("div", { className: "empty" }, "Nenhuma sessão registrada para este lick ainda.")
+        : h("div", { className: "charts" },
+            h("div", null, h("div", { className: "chart-label" }, "BPM ao longo do tempo"), h(MiniLineChart, { data: chartData, dataKey: "bpm", color: "#E8A33D" })),
+            h("div", null, h("div", { className: "chart-label" }, "Autoavaliação ao longo do tempo"), h(MiniLineChart, { data: chartData, dataKey: "rating", color: "#7BAE7F", yDomain: [0, 5] }))
+          )
+    ),
+    h("div", { className: "panel" },
+      h("div", { className: "panel-title" }, "Licks dominados"),
+      dominados.length === 0
+        ? h("div", { className: "empty" }, "Nenhum lick dominado ainda. Continue praticando!")
+        : h("ul", { className: "dominado-list" }, dominados.map(l => h("li", { key: l.id }, h("span", null, l.name), h("span", { className: "hint" }, l.dominatedAt ? fmtDate(l.dominatedAt) : ""))))
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(Root));
+
+} catch (err) {
+  document.getElementById("root").innerHTML =
+    '<div style="padding:24px;max-width:600px;margin:40px auto;font-family:sans-serif;color:#F2EFE6;background:#1F2A24;border:1px solid #D1453D;border-radius:10px;">'
+    + '<strong>Erro ao iniciar o app:</strong><br><br>'
+    + '<code style="white-space:pre-wrap;word-break:break-word;">' + (err && err.message ? err.message : String(err)) + '</code>'
+    + '<br><br>Tira um print dessa mensagem e manda pro Claude.</div>';
+  console.error(err);
+}
+
+</script>
+</body>
+</html>
