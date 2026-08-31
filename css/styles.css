@@ -420,6 +420,20 @@ main#view {
   font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
   color: var(--text-dim);
 }
+/* tile de "criar categoria" — mesmo tamanho dos outros, mas tracejado e
+   discreto, pra ficar claro que é uma ação diferente de navegar */
+.menu-tile-add {
+  flex-direction: row; align-items: center; justify-content: center; gap: 10px;
+  background: transparent;
+  border: 1.5px dashed var(--border-strong);
+  color: var(--text-dim);
+}
+.menu-tile-add:hover { background: var(--bg-elev); color: var(--text); }
+.menu-tile-add svg { width: 18px; height: 18px; flex-shrink: 0; }
+.menu-tile-add .menu-tile-label {
+  font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  text-transform: none; letter-spacing: 0; color: inherit;
+}
 
 .section-title {
   display: flex; align-items: center; justify-content: space-between;

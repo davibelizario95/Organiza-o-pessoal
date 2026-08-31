@@ -1,23 +1,21 @@
-import { state, subscribe, addItem, editItem, removeItem } from "../state.js";
+import { state, subscribe, addItem, editItem, removeItem, addMenuCategory } from "../state.js";
 import { icon } from "../icons.js";
 import { escapeHtml, startOfWeek, todayKey, nowIso } from "../utils.js";
 import { openTaskDetail } from "../components/card.js";
 import { openModal, confirmDialog } from "../components/modal.js";
 import { toast } from "../components/toast.js";
+import { MENU_FRENTE_DEFAULTS } from "../frentes.js";
 
 const DOW = ["S", "T", "Q", "Q", "S", "S", "D"];
 
-// A frente Casa abre num menu grande em vez de ir direto pra lista — as
-// categorias são só tags normais (mesmo campo "tags" que já existe em
-// qualquer item), então nada de esquema novo. "Ver todos os itens" e o
-// botão de voltar usam "__all__" como categoria especial (mostra tudo, sem
-// filtrar por tag nenhuma).
-const CASA_CATEGORIES = ["Financeiro", "Tarefas de Casa", "Compras"];
+// "Ver todos os itens" e o botão de voltar usam "__all__" como categoria
+// especial (mostra tudo, sem filtrar por tag nenhuma) — ver
+// MENU_FRENTE_DEFAULTS em frentes.js pra quais frentes abrem em menu.
 
 export function renderFrenteGeneric(frente) {
   const view = document.getElementById("view");
-  const isCasaMenu = frente.key === "casa";
-  let casaCategory = null; // null = menu grande; "__all__" ou uma das CASA_CATEGORIES = lista
+  const isMenuFrente = frente.key in MENU_FRENTE_DEFAULTS;
+  let menuCategory = null; // null = menu grande; "__all__" ou uma categoria = lista
   const unsub = subscribe(render);
   render();
   return unsub;
@@ -26,23 +24,33 @@ export function renderFrenteGeneric(frente) {
     return state.items.filter((i) => i.frente === frente.key);
   }
 
+  // padrões + as criadas pelo usuário (por ordem de criação) pra essa frente
+  function menuCategoriesList() {
+    const custom = state.menuCategories
+      .filter((c) => c.frente === frente.key)
+      .slice()
+      .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
+      .map((c) => c.nome);
+    return [...new Set([...(MENU_FRENTE_DEFAULTS[frente.key] || []), ...custom])];
+  }
+
   function render() {
-    if (isCasaMenu && casaCategory === null) return renderCasaMenu();
+    if (isMenuFrente && menuCategory === null) return renderCategoryMenu();
     return renderList();
   }
 
-  function renderCasaMenu() {
+  function renderCategoryMenu() {
     const all = items();
     view.innerHTML = `
       <div class="flex items-center gap-8" style="margin-bottom:20px;">
         <span class="nav-dot" style="background:${frente.color};width:12px;height:12px;"></span>
         <h1 style="font-size:19px;">${frente.label}</h1>
       </div>
-      <div class="menu-grid" id="casa-menu"></div>
-      <button class="btn btn-sm" id="casa-view-all" style="margin-top:16px;">Ver todos os itens</button>
+      <div class="menu-grid" id="menu-tiles"></div>
+      <button class="btn btn-sm" id="menu-view-all" style="margin-top:16px;">Ver todos os itens</button>
     `;
-    const menu = view.querySelector("#casa-menu");
-    CASA_CATEGORIES.forEach((cat) => {
+    const menu = view.querySelector("#menu-tiles");
+    menuCategoriesList().forEach((cat) => {
       const count = all.filter((i) => (i.tags || []).includes(cat) && !i.completedAt).length;
       const tile = document.createElement("button");
       tile.type = "button";
@@ -52,20 +60,54 @@ export function renderFrenteGeneric(frente) {
         <span class="menu-tile-count">${count ? `${count} pendente${count === 1 ? "" : "s"}` : "Nada pendente"}</span>
       `;
       tile.addEventListener("click", () => {
-        casaCategory = cat;
+        menuCategory = cat;
         render();
       });
       menu.appendChild(tile);
     });
-    view.querySelector("#casa-view-all").addEventListener("click", () => {
-      casaCategory = "__all__";
+    const addTile = document.createElement("button");
+    addTile.type = "button";
+    addTile.className = "menu-tile menu-tile-add";
+    addTile.innerHTML = `${icon("plus")}<span class="menu-tile-label">Nova categoria</span>`;
+    addTile.addEventListener("click", () => openAddCategoryModal());
+    menu.appendChild(addTile);
+
+    view.querySelector("#menu-view-all").addEventListener("click", () => {
+      menuCategory = "__all__";
       render();
+    });
+  }
+
+  function openAddCategoryModal() {
+    const { body, close } = openModal({ title: `Nova categoria — ${frente.label}` });
+    body.innerHTML = `
+      <label>Nome da categoria</label>
+      <input type="text" id="mc-nome" placeholder="Ex: Idiomas" />
+      <button class="btn btn-primary" id="mc-save" style="width:100%;margin-top:16px;">Criar</button>
+    `;
+    const input = body.querySelector("#mc-nome");
+    setTimeout(() => input.focus(), 30);
+    async function save() {
+      const nome = input.value.trim();
+      if (!nome) return input.focus();
+      const exists = menuCategoriesList().some((c) => c.toLowerCase() === nome.toLowerCase());
+      if (exists) {
+        toast("Essa categoria já existe.", "danger");
+        return;
+      }
+      await addMenuCategory({ frente: frente.key, nome });
+      toast("Categoria criada.");
+      close();
+    }
+    body.querySelector("#mc-save").addEventListener("click", save);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") save();
     });
   }
 
   function renderList() {
     const all = items();
-    const scoped = casaCategory && casaCategory !== "__all__" ? all.filter((i) => (i.tags || []).includes(casaCategory)) : all;
+    const scoped = menuCategory && menuCategory !== "__all__" ? all.filter((i) => (i.tags || []).includes(menuCategory)) : all;
     const habits = scoped.filter((i) => i.habit);
     const tasks = scoped.filter((i) => !i.habit);
     const pending = tasks.filter((i) => !i.completedAt);
@@ -74,9 +116,9 @@ export function renderFrenteGeneric(frente) {
     view.innerHTML = `
       <div class="flex items-center justify-between" style="margin-bottom:16px;">
         <div class="flex items-center gap-8">
-          ${isCasaMenu ? `<button class="btn btn-icon btn-ghost btn-sm" id="casa-back">${icon("chevronLeft")}</button>` : ""}
+          ${isMenuFrente ? `<button class="btn btn-icon btn-ghost btn-sm" id="menu-back">${icon("chevronLeft")}</button>` : ""}
           <span class="nav-dot" style="background:${frente.color};width:12px;height:12px;"></span>
-          <h1 style="font-size:19px;">${casaCategory && casaCategory !== "__all__" ? `${frente.label} · ${escapeHtml(casaCategory)}` : frente.label}</h1>
+          <h1 style="font-size:19px;">${menuCategory && menuCategory !== "__all__" ? `${frente.label} · ${escapeHtml(menuCategory)}` : frente.label}</h1>
         </div>
         <button class="btn btn-primary btn-sm" id="add-btn">${icon("plus")} ${frente.kind === "habit" ? "Novo hábito/tarefa" : "Novo item"}</button>
       </div>
@@ -97,11 +139,11 @@ export function renderFrenteGeneric(frente) {
       }
     `;
 
-    view.querySelector("#casa-back")?.addEventListener("click", () => {
-      casaCategory = null;
+    view.querySelector("#menu-back")?.addEventListener("click", () => {
+      menuCategory = null;
       render();
     });
-    const presetTag = casaCategory && casaCategory !== "__all__" ? casaCategory : null;
+    const presetTag = menuCategory && menuCategory !== "__all__" ? menuCategory : null;
     view.querySelector("#add-btn").addEventListener("click", () => openAddModal(presetTag));
 
     const habitsWrap = view.querySelector("#habits-wrap");

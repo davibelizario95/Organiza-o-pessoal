@@ -11,6 +11,18 @@ export function frenteByKey(key) {
   return FRENTES.find((f) => f.key === key);
 }
 
+// Frentes que abrem num "menu grande" de categorias (ver frenteGeneric.js)
+// em vez de ir direto pra lista — as categorias são o campo "tags" que já
+// existe em qualquer item. Cada uma tem suas opções padrão; o usuário pode
+// criar mais pelo botão "Nova categoria" no próprio menu (guardadas em
+// state.menuCategories). Itens dessas frentes também ganham o campo Tags
+// editável no card de detalhe (ver card.js), pra dar pra trocar de
+// categoria depois de criado.
+export const MENU_FRENTE_DEFAULTS = {
+  casa: ["Financeiro", "Tarefas de Casa", "Compras"],
+  estudo: ["Música", "IPE"],
+};
+
 // Aplica/troca o prefixo "Frente: " no valor de uma caixa de comando
 // rápido — usado pelo seletor de frente ao lado da caixa de texto. Se o
 // texto já começa com um prefixo de frente reconhecido, troca só ele; senão

@@ -10,6 +10,7 @@ export const state = {
   filters: [],
   transactions: [],
   financeCategories: [],
+  menuCategories: [],
 };
 
 const listeners = new Set();
@@ -26,6 +27,7 @@ let unsubTemplates = null;
 let unsubFilters = null;
 let unsubTransactions = null;
 let unsubFinanceCategories = null;
+let unsubMenuCategories = null;
 
 const LS_CURRENT = "op_current_profile";
 const LS_TRUSTED = "op_trusted_profiles";
@@ -117,6 +119,7 @@ export function selectProfile(profileId, { silent } = {}) {
   if (unsubFilters) unsubFilters();
   if (unsubTransactions) unsubTransactions();
   if (unsubFinanceCategories) unsubFinanceCategories();
+  if (unsubMenuCategories) unsubMenuCategories();
   state.profile = state.profiles.find((p) => p.id === profileId) || state.profile;
   unsubItems = store.subscribeItems(profileId, (items) => {
     state.items = items;
@@ -138,6 +141,10 @@ export function selectProfile(profileId, { silent } = {}) {
     state.financeCategories = financeCategories;
     emit();
   });
+  unsubMenuCategories = store.subscribeMenuCategories(profileId, (menuCategories) => {
+    state.menuCategories = menuCategories;
+    emit();
+  });
   if (!silent) emit();
 }
 
@@ -148,12 +155,14 @@ export function signOutProfile() {
   if (unsubFilters) unsubFilters();
   if (unsubTransactions) unsubTransactions();
   if (unsubFinanceCategories) unsubFinanceCategories();
+  if (unsubMenuCategories) unsubMenuCategories();
   state.profile = null;
   state.items = [];
   state.templates = [];
   state.filters = [];
   state.transactions = [];
   state.financeCategories = [];
+  state.menuCategories = [];
   emit();
 }
 
@@ -196,4 +205,12 @@ export async function addFinanceCategory(data) {
 export async function removeFinanceCategory(id) {
   if (!state.profile) return;
   return store.deleteFinanceCategory(state.profile.id, id);
+}
+export async function addMenuCategory(data) {
+  if (!state.profile) return;
+  return store.createMenuCategory(state.profile.id, data);
+}
+export async function removeMenuCategory(id) {
+  if (!state.profile) return;
+  return store.deleteMenuCategory(state.profile.id, id);
 }

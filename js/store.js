@@ -11,6 +11,7 @@ const lsTemplatesKey = (p) => `op_templates_${p}`;
 const lsFiltersKey = (p) => `op_filters_${p}`;
 const lsTransactionsKey = (p) => `op_transactions_${p}`;
 const lsFinanceCategoriesKey = (p) => `op_finance_categories_${p}`;
+const lsMenuCategoriesKey = (p) => `op_menu_categories_${p}`;
 const LS_CURRENT = "op_current_profile";
 const LS_TRUSTED = "op_trusted_profiles";
 
@@ -516,4 +517,62 @@ export async function deleteFinanceCategory(profileId, id) {
   const list = readLs(lsFinanceCategoriesKey(profileId), []).filter((c) => c.id !== id);
   writeLs(lsFinanceCategoriesKey(profileId), list);
   notifyLocal(lsFinanceCategoriesKey(profileId));
+}
+
+// -------------------------------------------------- MENU DE CATEGORIAS (genérico)
+// Categorias criadas pelo usuário pro "menu grande" de qualquer frente que
+// tiver uma (Casa, Estudo, ...) — cada doc tem {frente, nome}. As opções
+// padrão de cada frente vivem hardcoded em frenteGeneric.js, essas aqui são
+// só as extras que o botão "Nova categoria" cria.
+
+export async function listMenuCategories(profileId) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { collection, getDocs } = fb.firestore;
+    const snap = await getDocs(collection(fb.db, "profiles", profileId, "menuCategories"));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
+  return readLs(lsMenuCategoriesKey(profileId), []);
+}
+
+export function subscribeMenuCategories(profileId, cb) {
+  if (backendMode === "firebase") {
+    let unsub = () => {};
+    getFirebase().then((fb) => {
+      const { collection, onSnapshot } = fb.firestore;
+      unsub = onSnapshot(collection(fb.db, "profiles", profileId, "menuCategories"), (snap) => {
+        cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      });
+    });
+    return () => unsub();
+  }
+  return subscribeLocal(lsMenuCategoriesKey(profileId), cb);
+}
+
+export async function createMenuCategory(profileId, data) {
+  const cat = { createdAt: nowIso(), ...data };
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { collection, addDoc } = fb.firestore;
+    const ref = await addDoc(collection(fb.db, "profiles", profileId, "menuCategories"), cat);
+    return { id: ref.id, ...cat };
+  }
+  const list = readLs(lsMenuCategoriesKey(profileId), []);
+  const full = { id: uid(), ...cat };
+  list.push(full);
+  writeLs(lsMenuCategoriesKey(profileId), list);
+  notifyLocal(lsMenuCategoriesKey(profileId));
+  return full;
+}
+
+export async function deleteMenuCategory(profileId, id) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { doc, deleteDoc } = fb.firestore;
+    await deleteDoc(doc(fb.db, "profiles", profileId, "menuCategories", id));
+    return;
+  }
+  const list = readLs(lsMenuCategoriesKey(profileId), []).filter((c) => c.id !== id);
+  writeLs(lsMenuCategoriesKey(profileId), list);
+  notifyLocal(lsMenuCategoriesKey(profileId));
 }

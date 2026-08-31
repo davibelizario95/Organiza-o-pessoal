@@ -1,7 +1,7 @@
 import { icon } from "../icons.js";
 import { openModal, confirmDialog } from "./modal.js";
 import { editItem, removeItem, state, addItem } from "../state.js";
-import { CONTEXTS, COLUMNS, frenteByKey } from "../frentes.js";
+import { CONTEXTS, COLUMNS, frenteByKey, MENU_FRENTE_DEFAULTS } from "../frentes.js";
 import { computeElapsedSec, startTimer, stopTimer } from "./timer.js";
 import { createRecorder } from "./voiceRecorder.js";
 import { getAudio, deleteAudio } from "../idb.js";
@@ -190,10 +190,14 @@ export function openTaskDetail(itemId) {
         : ""
     }
     ${
-      item.frente === "trabalho" || item.frente === "casa"
+      item.frente === "trabalho" || item.frente in MENU_FRENTE_DEFAULTS
         ? `
-    <label>Tags${item.frente === "casa" ? " (ex: Financeiro, Tarefas de Casa, Compras — pra aparecer no menu da Casa)" : " (separadas por vírgula — pra filtrar dentro de cada contexto)"}</label>
-    <input type="text" id="d-tags" placeholder="${item.frente === "casa" ? "Ex: Financeiro" : "Ex: Online, Especial"}" value="${escapeHtml((item.tags || []).join(", "))}" />
+    <label>Tags${
+      item.frente in MENU_FRENTE_DEFAULTS
+        ? ` (ex: ${MENU_FRENTE_DEFAULTS[item.frente].join(", ")} — pra aparecer no menu de ${frenteByKey(item.frente)?.label || item.frente})`
+        : " (separadas por vírgula — pra filtrar dentro de cada contexto)"
+    }</label>
+    <input type="text" id="d-tags" placeholder="${item.frente in MENU_FRENTE_DEFAULTS ? `Ex: ${MENU_FRENTE_DEFAULTS[item.frente][0]}` : "Ex: Online, Especial"}" value="${escapeHtml((item.tags || []).join(", "))}" />
     `
         : ""
     }
@@ -503,7 +507,7 @@ export function openTaskDetail(itemId) {
     } else {
       patch.completedAt = doneChecked ? item.completedAt || nowIso() : null;
     }
-    if (item.frente === "trabalho" || item.frente === "casa") {
+    if (item.frente === "trabalho" || item.frente in MENU_FRENTE_DEFAULTS) {
       patch.tags = body
         .querySelector("#d-tags")
         .value.split(",")
