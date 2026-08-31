@@ -167,6 +167,12 @@ function rowToSession(r) {
 function sessionToRow(s, userId) {
   return { id: s.id || uid(), user_id: userId, lick_id: s.lickId, date: s.date, duration_seconds: s.durationSeconds || 0, bpm_achieved: s.bpmAchieved || null, rating: s.rating || null, notes: s.notes || null };
 }
+function rowToArtist(r) {
+  return { id: r.id, name: r.name, notes: r.notes, createdAt: r.created_at };
+}
+function artistToRow(a, userId) {
+  return { id: a.id, user_id: userId, name: a.name, notes: a.notes || null };
+}
 
 // ---------- data hooks ----------
 function useLicks(userId) {
@@ -215,6 +221,31 @@ function useSessions(userId) {
     await load();
   }
   return { sessions, loading, add, reload: load };
+}
+
+function useArtists(userId) {
+  const [artists, setArtists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase.from("artists").select("*").eq("user_id", userId).order("name", { ascending: true });
+    if (error) console.error(error);
+    setArtists(data ? data.map(rowToArtist) : []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, [userId]);
+  async function upsert(artist) {
+    const row = artistToRow(Object.assign({ id: artist.id || uid() }, artist), userId);
+    const { error } = await supabase.from("artists").upsert(row);
+    if (error) console.error(error);
+    await load();
+  }
+  async function remove(id) {
+    const { error } = await supabase.from("artists").delete().eq("id", id);
+    if (error) console.error(error);
+    await load();
+  }
+  return { artists, loading, upsert, remove, reload: load };
 }
 
 function useGoal(userId) {
@@ -434,6 +465,7 @@ function App(props) {
   const { userId, userEmail } = props;
   const { licks, loading: licksLoading, upsert: upsertLick, remove: removeLick } = useLicks(userId);
   const { sessions, loading: sessionsLoading, add: addSession } = useSessions(userId);
+  const { artists, loading: artistsLoading, upsert: upsertArtist, remove: removeArtist } = useArtists(userId);
   const [goal, setGoal] = useGoal(userId);
   const [tab, setTab] = useState("home");
   const [editingLick, setEditingLick] = useState(null);
@@ -441,7 +473,7 @@ function App(props) {
   const [mediaModalLick, setMediaModalLick] = useState(null);
   const [mediaVersion, setMediaVersion] = useState(0);
 
-  const ready = !licksLoading && !sessionsLoading;
+  const ready = !licksLoading && !sessionsLoading && !artistsLoading;
   const activeLick = licks.find(l => l.id === activeLickId) || null;
   const openMedia = (lick) => setMediaModalLick(lick);
   const closeMedia = () => { setMediaModalLick(null); setMediaVersion(v => v + 1); };
@@ -480,7 +512,7 @@ function App(props) {
       )
     ),
     h("nav", { className: "tabs" },
-      [{ id: "home", label: "Início" }, { id: "library", label: "Biblioteca" }, { id: "practice", label: "Praticar" }, { id: "progress", label: "Evolução" }].map(t =>
+      [{ id: "home", label: "Início" }, { id: "library", label: "Biblioteca" }, { id: "artists", label: "Artistas" }, { id: "practice", label: "Praticar" }, { id: "progress", label: "Evolução" }].map(t =>
         h("button", { key: t.id, className: "tab-btn" + (tab === t.id ? " active" : ""), onClick: () => setTab(t.id) }, t.label)
       )
     ),
@@ -493,6 +525,9 @@ function App(props) {
         onPractice: l => { setActiveLickId(l.id); setTab("practice"); },
         onOpenMedia: openMedia, mediaVersion
       }),
+      ready && tab === "artists" && h(ArtistsView, {
+        artists, licks, onNewArtist: upsertArtist, onDeleteArtist: removeArtist
+      }),
       ready && tab === "practice" && h(PracticeView, {
         licks, activeLick, setActiveLickId, onSaveSession: saveSession, onStatusChange: changeStatus,
         onOpenMedia: openMedia, mediaVersion
@@ -501,7 +536,7 @@ function App(props) {
         licks, sessions, days14, goal, setGoal, sessionsThisWeek, streak
       })
     ),
-    editingLick !== null && h(LickForm, { initial: editingLick, userId, onCancel: () => setEditingLick(null), onSave: saveLick }),
+    editingLick !== null && h(LickForm, { initial: editingLick, userId, artists, onCreateArtist: upsertArtist, onCancel: () => setEditingLick(null), onSave: saveLick }),
     mediaModalLick && h(MediaModal, { lick: mediaModalLick, userId, onClose: closeMedia })
   );
 }
@@ -645,8 +680,59 @@ function LibraryView(props) {
   );
 }
 
+function ArtistsView(props) {
+  const { artists, licks, onNewArtist, onDeleteArtist } = props;
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const trimmed = name.trim();
+  const alreadyExists = trimmed && artists.some(a => a.name.toLowerCase() === trimmed.toLowerCase());
+
+  async function save() {
+    if (!trimmed || alreadyExists || saving) return;
+    setSaving(true);
+    await onNewArtist({ name: trimmed });
+    setSaving(false);
+    setName("");
+    setShowForm(false);
+  }
+
+  return h("div", null,
+    h("div", { className: "section-header" },
+      h("h2", null, "Artistas"),
+      h("button", { className: "primary-btn", onClick: () => setShowForm(v => !v) }, showForm ? "Cancelar" : "+ Novo artista")
+    ),
+    showForm && h("div", { className: "panel" },
+      h("div", { className: "form-row", style: { gridTemplateColumns: "1fr auto", alignItems: "end" } },
+        h("div", null, h("label", null, "Nome do artista"),
+          h("input", {
+            value: name, onChange: e => setName(e.target.value), placeholder: "ex: John Mayer", autoFocus: true,
+            onKeyDown: e => { if (e.key === "Enter") save(); }
+          })),
+        h("button", { className: "primary-btn", onClick: save, disabled: !trimmed || alreadyExists || saving }, saving ? "Salvando..." : "Salvar")
+      ),
+      alreadyExists && h("div", { className: "hint", style: { marginTop: 6 } }, "Esse artista já está cadastrado.")
+    ),
+    artists.length === 0
+      ? h("div", { className: "empty" }, "Nenhum artista cadastrado ainda. Cadastre pelo botão acima, ou direto ao criar um lick.")
+      : h("div", null, artists.map(a => {
+          const count = licks.filter(l => l.artist === a.name).length;
+          return h("div", { key: a.id, className: "lick-card" },
+            h("div", { className: "lick-card-top" },
+              h("div", null,
+                h("div", { className: "lick-name" }, a.name),
+                h("div", { className: "lick-artist" }, count + " lick" + (count === 1 ? "" : "s") + " cadastrado" + (count === 1 ? "" : "s"))
+              ),
+              h("button", { className: "icon-btn danger", onClick: () => onDeleteArtist(a.id), title: "Excluir artista" }, "🗑")
+            )
+          );
+        }))
+  );
+}
+
 function LickForm(props) {
-  const { initial, userId, onCancel, onSave } = props;
+  const { initial, userId, artists, onCreateArtist, onCancel, onSave } = props;
   const isEdit = !!initial.id;
   const [id] = useState(() => initial.id || uid());
   const [name, setName] = useState(initial.name || "");
@@ -659,6 +745,18 @@ function LickForm(props) {
   const [pendingFiles, setPendingFiles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [registeringArtist, setRegisteringArtist] = useState(false);
+
+  const artistList = artists || [];
+  const artistTrimmed = artist.trim();
+  const artistIsRegistered = artistTrimmed && artistList.some(a => a.name.toLowerCase() === artistTrimmed.toLowerCase());
+
+  async function registerArtist() {
+    if (!artistTrimmed || artistIsRegistered || !onCreateArtist) return;
+    setRegisteringArtist(true);
+    await onCreateArtist({ name: artistTrimmed });
+    setRegisteringArtist(false);
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -688,7 +786,14 @@ function LickForm(props) {
       h("label", null, "Nome do lick"),
       h("input", { value: name, onChange: e => setName(e.target.value), placeholder: "ex: Bend duplo na corda B", autoFocus: true }),
       h("label", null, "Artista / música de origem"),
-      h("input", { value: artist, onChange: e => setArtist(e.target.value), placeholder: "ex: John Mayer - Neon" }),
+      h("div", { className: "form-row", style: { gridTemplateColumns: "1fr auto", alignItems: "center" } },
+        h("input", { value: artist, onChange: e => setArtist(e.target.value), placeholder: "ex: John Mayer - Neon", list: "artist-suggestions" }),
+        h("button", {
+          type: "button", className: "ghost-btn", disabled: !artistTrimmed || artistIsRegistered || registeringArtist,
+          onClick: registerArtist, title: artistIsRegistered ? "Esse artista já está cadastrado" : "Cadastrar esse artista"
+        }, artistIsRegistered ? "✓ Cadastrado" : (registeringArtist ? "Cadastrando..." : "+ Cadastrar"))
+      ),
+      h("datalist", { id: "artist-suggestions" }, artistList.map(a => h("option", { key: a.id, value: a.name }))),
       h("div", { className: "form-row" },
         h("div", null, h("label", null, "Dificuldade"),
           h("select", { value: difficulty, onChange: e => setDifficulty(e.target.value) }, DIFFICULTY.map(d => h("option", { key: d, value: d }, d)))),
