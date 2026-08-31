@@ -1,7 +1,7 @@
 import { icon } from "../icons.js";
 import { openModal } from "./modal.js";
 import { addItem, state } from "../state.js";
-import { FRENTES, frenteByKey } from "../frentes.js";
+import { FRENTES, frenteByKey, withFrentePrefix } from "../frentes.js";
 import { toast } from "./toast.js";
 import { parseQuickCommand } from "../quickCommand.js";
 import { attachVoiceButton } from "../speechToText.js";
@@ -15,6 +15,10 @@ export function mountQuickCapture() {
   form.id = "quick-chat-bar";
   form.className = "quick-chat";
   form.innerHTML = `
+    <select class="quick-chat-frente" id="quick-chat-frente" title="Escolher frente">
+      <option value="">Frente</option>
+      ${FRENTES.map((f) => `<option value="${f.key}">${f.label}</option>`).join("")}
+    </select>
     <input type="text" id="quick-chat-input" autocomplete="off" placeholder="Frente: título, horário dia, coluna" />
     <button type="button" class="quick-chat-mic" id="quick-chat-mic" title="Ditar por voz">${icon("mic")}</button>
     <button type="submit" class="quick-chat-send" title="Adicionar">${icon("plus")}</button>
@@ -22,6 +26,13 @@ export function mountQuickCapture() {
   document.body.appendChild(form);
 
   const input = form.querySelector("#quick-chat-input");
+  const frenteSelect = form.querySelector("#quick-chat-frente");
+  frenteSelect.addEventListener("change", () => {
+    if (!frenteSelect.value) return;
+    input.value = withFrentePrefix(input.value, frenteSelect.value);
+    frenteSelect.value = "";
+    input.focus();
+  });
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const raw = input.value.trim();

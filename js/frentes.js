@@ -11,6 +11,24 @@ export function frenteByKey(key) {
   return FRENTES.find((f) => f.key === key);
 }
 
+// Aplica/troca o prefixo "Frente: " no valor de uma caixa de comando
+// rápido — usado pelo seletor de frente ao lado da caixa de texto. Se o
+// texto já começa com um prefixo de frente reconhecido, troca só ele; senão
+// só adiciona na frente, sem mexer no resto do que já foi digitado.
+export function withFrentePrefix(currentValue, frenteKey) {
+  const frente = frenteByKey(frenteKey);
+  if (!frente) return currentValue;
+  const raw = String(currentValue || "");
+  const colonIdx = raw.indexOf(":");
+  let rest = raw;
+  if (colonIdx !== -1) {
+    const maybeLabel = raw.slice(0, colonIdx).trim().toLowerCase();
+    const isFrente = FRENTES.some((f) => f.label.toLowerCase() === maybeLabel || f.key.toLowerCase() === maybeLabel);
+    if (isFrente) rest = raw.slice(colonIdx + 1).trim();
+  }
+  return rest ? `${frente.label}: ${rest}` : `${frente.label}: `;
+}
+
 export const CONTEXTS = [
   { key: "IC", label: "Igreja da Cidade" },
   { key: "DB", label: "Belizario Produções" },

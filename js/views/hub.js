@@ -1,5 +1,5 @@
 import { state, addItem, subscribe } from "../state.js";
-import { frenteByKey } from "../frentes.js";
+import { FRENTES, frenteByKey, withFrentePrefix } from "../frentes.js";
 import { navigate } from "../router.js";
 import { icon } from "../icons.js";
 import { greeting, escapeHtml, formatTime, todayKey } from "../utils.js";
@@ -141,6 +141,10 @@ export function renderHub() {
 
       <div class="hub-reveal" id="hub-reveal">
         <form class="hub-quickbar" id="hub-quickbar">
+          <select class="hub-quickbar-frente" id="hub-quickbar-frente" title="Escolher frente">
+            <option value="">Frente</option>
+            ${FRENTES.map((f) => `<option value="${f.key}">${f.label}</option>`).join("")}
+          </select>
           <input type="text" id="hub-quickbar-input" autocomplete="off"
             placeholder="Frente: título, horário dia, coluna" />
           <button type="button" class="hub-quickbar-mic" id="hub-quickbar-mic" title="Ditar por voz">${icon("mic")}</button>
@@ -172,6 +176,13 @@ export function renderHub() {
     input.value = "";
   });
   attachVoiceButton(input, view.querySelector("#hub-quickbar-mic"), () => form.requestSubmit());
+  const frenteSelect = view.querySelector("#hub-quickbar-frente");
+  frenteSelect.addEventListener("change", () => {
+    if (!frenteSelect.value) return;
+    input.value = withFrentePrefix(input.value, frenteSelect.value);
+    frenteSelect.value = "";
+    input.focus();
+  });
   view.querySelector("#hub-enter-btn").addEventListener("click", () => navigate("dashboard"));
 
   // ------------------------------------------- hero que expande com o scroll

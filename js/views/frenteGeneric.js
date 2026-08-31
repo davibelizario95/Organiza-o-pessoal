@@ -7,8 +7,17 @@ import { toast } from "../components/toast.js";
 
 const DOW = ["S", "T", "Q", "Q", "S", "S", "D"];
 
+// A frente Casa abre num menu grande em vez de ir direto pra lista — as
+// categorias são só tags normais (mesmo campo "tags" que já existe em
+// qualquer item), então nada de esquema novo. "Ver todos os itens" e o
+// botão de voltar usam "__all__" como categoria especial (mostra tudo, sem
+// filtrar por tag nenhuma).
+const CASA_CATEGORIES = ["Financeiro", "Tarefas de Casa", "Compras"];
+
 export function renderFrenteGeneric(frente) {
   const view = document.getElementById("view");
+  const isCasaMenu = frente.key === "casa";
+  let casaCategory = null; // null = menu grande; "__all__" ou uma das CASA_CATEGORIES = lista
   const unsub = subscribe(render);
   render();
   return unsub;
@@ -18,17 +27,56 @@ export function renderFrenteGeneric(frente) {
   }
 
   function render() {
+    if (isCasaMenu && casaCategory === null) return renderCasaMenu();
+    return renderList();
+  }
+
+  function renderCasaMenu() {
     const all = items();
-    const habits = all.filter((i) => i.habit);
-    const tasks = all.filter((i) => !i.habit);
+    view.innerHTML = `
+      <div class="flex items-center gap-8" style="margin-bottom:20px;">
+        <span class="nav-dot" style="background:${frente.color};width:12px;height:12px;"></span>
+        <h1 style="font-size:19px;">${frente.label}</h1>
+      </div>
+      <div class="menu-grid" id="casa-menu"></div>
+      <button class="btn btn-sm" id="casa-view-all" style="margin-top:16px;">Ver todos os itens</button>
+    `;
+    const menu = view.querySelector("#casa-menu");
+    CASA_CATEGORIES.forEach((cat) => {
+      const count = all.filter((i) => (i.tags || []).includes(cat) && !i.completedAt).length;
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "menu-tile";
+      tile.innerHTML = `
+        <span class="menu-tile-label">${escapeHtml(cat)}</span>
+        <span class="menu-tile-count">${count ? `${count} pendente${count === 1 ? "" : "s"}` : "Nada pendente"}</span>
+      `;
+      tile.addEventListener("click", () => {
+        casaCategory = cat;
+        render();
+      });
+      menu.appendChild(tile);
+    });
+    view.querySelector("#casa-view-all").addEventListener("click", () => {
+      casaCategory = "__all__";
+      render();
+    });
+  }
+
+  function renderList() {
+    const all = items();
+    const scoped = casaCategory && casaCategory !== "__all__" ? all.filter((i) => (i.tags || []).includes(casaCategory)) : all;
+    const habits = scoped.filter((i) => i.habit);
+    const tasks = scoped.filter((i) => !i.habit);
     const pending = tasks.filter((i) => !i.completedAt);
     const done = tasks.filter((i) => i.completedAt);
 
     view.innerHTML = `
       <div class="flex items-center justify-between" style="margin-bottom:16px;">
         <div class="flex items-center gap-8">
+          ${isCasaMenu ? `<button class="btn btn-icon btn-ghost btn-sm" id="casa-back">${icon("chevronLeft")}</button>` : ""}
           <span class="nav-dot" style="background:${frente.color};width:12px;height:12px;"></span>
-          <h1 style="font-size:19px;">${frente.label}</h1>
+          <h1 style="font-size:19px;">${casaCategory && casaCategory !== "__all__" ? `${frente.label} · ${escapeHtml(casaCategory)}` : frente.label}</h1>
         </div>
         <button class="btn btn-primary btn-sm" id="add-btn">${icon("plus")} ${frente.kind === "habit" ? "Novo hábito/tarefa" : "Novo item"}</button>
       </div>
@@ -49,7 +97,12 @@ export function renderFrenteGeneric(frente) {
       }
     `;
 
-    view.querySelector("#add-btn").addEventListener("click", () => openAddModal());
+    view.querySelector("#casa-back")?.addEventListener("click", () => {
+      casaCategory = null;
+      render();
+    });
+    const presetTag = casaCategory && casaCategory !== "__all__" ? casaCategory : null;
+    view.querySelector("#add-btn").addEventListener("click", () => openAddModal(presetTag));
 
     const habitsWrap = view.querySelector("#habits-wrap");
     if (habitsWrap) {
@@ -88,6 +141,7 @@ export function renderFrenteGeneric(frente) {
     return `<div class="list-item" data-id="${item.id}">
       <div class="list-item-check ${item.completedAt ? "done" : ""}" data-check="${item.id}">${item.completedAt ? icon("check") : ""}</div>
       <div class="list-item-title ${item.completedAt ? "done" : ""}" data-open="${item.id}">${escapeHtml(item.title)}</div>
+      ${(item.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
       ${item.onAgenda ? icon("agenda", "icon") : ""}
     </div>`;
   }
@@ -147,7 +201,7 @@ export function renderFrenteGeneric(frente) {
     await editItem(id, { completedAt: item.completedAt ? null : nowIso() });
   }
 
-  function openAddModal() {
+  function openAddModal(presetTag) {
     const { body, close } = openModal({ title: frente.kind === "habit" ? "Novo hábito ou tarefa" : `Novo item — ${frente.label}` });
     body.innerHTML = `
       <label>Título</label>
@@ -157,6 +211,7 @@ export function renderFrenteGeneric(frente) {
           ? `<label class="checkbox-row"><input type="checkbox" id="a-habit" checked/> É um hábito recorrente (com checklist semanal)</label>`
           : ""
       }
+      ${presetTag ? `<p class="small text-dim">Vai entrar em <strong>${escapeHtml(presetTag)}</strong>.</p>` : ""}
       <button class="btn btn-primary" id="a-save" style="width:100%;margin-top:16px;">Adicionar</button>
     `;
     const titleField = body.querySelector("#a-title");
@@ -165,7 +220,13 @@ export function renderFrenteGeneric(frente) {
       const title = titleField.value.trim();
       if (!title) return titleField.focus();
       const isHabit = frente.kind === "habit" ? body.querySelector("#a-habit").checked : false;
-      await addItem({ frente: frente.key, title, habit: isHabit, type: isHabit ? "habit" : "task" });
+      await addItem({
+        frente: frente.key,
+        title,
+        habit: isHabit,
+        type: isHabit ? "habit" : "task",
+        tags: presetTag ? [presetTag] : [],
+      });
       toast("Adicionado.");
       close();
     }

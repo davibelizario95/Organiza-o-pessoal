@@ -186,9 +186,20 @@ export function openTaskDetail(itemId) {
         </select>
       </div>
     </div>
-    <label>Tags (separadas por vírgula — pra filtrar dentro de cada contexto)</label>
-    <input type="text" id="d-tags" placeholder="Ex: Online, Especial" value="${escapeHtml((item.tags || []).join(", "))}" />
-
+    `
+        : ""
+    }
+    ${
+      item.frente === "trabalho" || item.frente === "casa"
+        ? `
+    <label>Tags${item.frente === "casa" ? " (ex: Financeiro, Tarefas de Casa, Compras — pra aparecer no menu da Casa)" : " (separadas por vírgula — pra filtrar dentro de cada contexto)"}</label>
+    <input type="text" id="d-tags" placeholder="${item.frente === "casa" ? "Ex: Financeiro" : "Ex: Online, Especial"}" value="${escapeHtml((item.tags || []).join(", "))}" />
+    `
+        : ""
+    }
+    ${
+      item.frente === "trabalho"
+        ? `
     <label>Nota de voz</label>
     <div class="card" style="background:var(--bg-elev-2);padding:12px;">
       <button class="btn mic-btn" id="d-mic">${icon("mic")} Gravar nota de voz</button>
@@ -485,17 +496,19 @@ export function openTaskDetail(itemId) {
     if (item.frente === "trabalho") {
       patch.column = body.querySelector("#d-column").value;
       patch.context = body.querySelector("#d-context").value || null;
-      patch.tags = body
-        .querySelector("#d-tags")
-        .value.split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
       const t = body.querySelector("#d-target").value;
       patch.timeTargetMin = t ? Number(t) : null;
       if (patch.column === "done" && !item.completedAt) patch.completedAt = nowIso();
       if (patch.column !== "done") patch.completedAt = null;
     } else {
       patch.completedAt = doneChecked ? item.completedAt || nowIso() : null;
+    }
+    if (item.frente === "trabalho" || item.frente === "casa") {
+      patch.tags = body
+        .querySelector("#d-tags")
+        .value.split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
     }
     if (item.habit) {
       const today = new Date().toISOString().slice(0, 10);

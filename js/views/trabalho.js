@@ -163,11 +163,31 @@ export function renderTrabalho() {
       colEl.className = "board-col";
       colEl.dataset.col = col.key;
       colEl.innerHTML = `
-        <div class="board-col-head"><span>${col.label}</span><span>${colItems.length}</span></div>
+        <div class="board-col-head">
+          <span>${col.label}</span>
+          <div class="flex items-center gap-8">
+            <span>${colItems.length}</span>
+            ${
+              colItems.length
+                ? `<button class="btn btn-icon btn-ghost btn-sm" data-clear-col title="Excluir todos os cards desta coluna">${icon("trash")}</button>`
+                : ""
+            }
+          </div>
+        </div>
         <div class="board-col-body"></div>
       `;
       const bodyEl = colEl.querySelector(".board-col-body");
       colItems.forEach((item) => bodyEl.appendChild(renderTaskCard(item)));
+
+      colEl.querySelector("[data-clear-col]")?.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const ok = await confirmDialog(
+          `Excluir todos os ${colItems.length} cards de "${col.label}"? Essa ação não pode ser desfeita.`
+        );
+        if (!ok) return;
+        for (const item of colItems) await removeItem(item.id);
+        toast(`${colItems.length} cards excluídos.`);
+      });
 
       colEl.addEventListener("dragover", (e) => {
         e.preventDefault();
