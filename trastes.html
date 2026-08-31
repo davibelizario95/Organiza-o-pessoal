@@ -481,12 +481,13 @@ function App(props) {
   const openMedia = (lick) => setMediaModalLick(lick);
   const closeMedia = () => { setMediaModalLick(null); setMediaVersion(v => v + 1); };
 
-  function saveLick(data) {
+  async function saveLick(data) {
     const prev = licks.find(l => l.id === data.id);
     const wasNotDominado = !prev || prev.status !== "dominado";
     const dominatedAt = (data.status === "dominado" && wasNotDominado) ? new Date().toISOString() : (prev ? prev.dominatedAt : null);
-    upsertLick(Object.assign({}, data, { dominatedAt }));
-    setEditingLick(null);
+    await upsertLick(Object.assign({}, data, { dominatedAt }));
+    // fecha o modal só depois de o lick estar gravado — LickForm chama isso
+    // depois de subir a mídia também (ver submit() lá)
   }
   function deleteLick(id) {
     removeLick(id);
@@ -812,11 +813,29 @@ function LickForm(props) {
       targetBpm: targetBpm ? Number(targetBpm) : null,
       link: link.trim(), notes: notes.trim(),
     });
-    for (const file of pendingFiles) {
-      try { await uploadMedia(file, id, userId); }
-      catch (err) { console.error(err); setUploadError("Algum arquivo falhou ao enviar: " + (err.message || "erro desconhecido")); }
+    try {
+      // grava o lick ANTES de subir mídia — se o lick é novo, ele só passa
+      // a existir de verdade na tabela aqui; subir mídia antes disso
+      // (como era antes) fazia o upload falhar sempre num lick novo, porque
+      // apontava pra um lick_id que ainda não existia no banco
+      await onSave(lickData);
+      const stillPending = [];
+      for (const file of pendingFiles) {
+        try {
+          await uploadMedia(file, id, userId);
+        } catch (err) {
+          console.error(err);
+          stillPending.push(file);
+          setUploadError("Algum arquivo falhou ao enviar: " + (err.message || "erro desconhecido"));
+        }
+      }
+      setPendingFiles(stillPending);
+      if (stillPending.length === 0) onCancel();
+    } catch (err) {
+      console.error(err);
+      setUploadError("Erro ao salvar o lick: " + (err.message || "erro desconhecido"));
     }
-    onSave(lickData);
+    setSaving(false);
   }
   function removePendingFile(idx) { setPendingFiles(pendingFiles.filter((_, i) => i !== idx)); }
 
