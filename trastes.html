@@ -240,12 +240,12 @@ function useArtists(userId) {
   async function upsert(artist) {
     const row = artistToRow(Object.assign({ id: artist.id || uid() }, artist), userId);
     const { error } = await supabase.from("artists").upsert(row);
-    if (error) console.error(error);
+    if (error) { console.error(error); throw error; }
     await load();
   }
   async function remove(id) {
     const { error } = await supabase.from("artists").delete().eq("id", id);
-    if (error) console.error(error);
+    if (error) { console.error(error); throw error; }
     await load();
   }
   return { artists, loading, upsert, remove, reload: load };
@@ -688,6 +688,7 @@ function ArtistsView(props) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const trimmed = name.trim();
   const alreadyExists = trimmed && artists.some(a => a.name.toLowerCase() === trimmed.toLowerCase());
@@ -695,10 +696,15 @@ function ArtistsView(props) {
   async function save() {
     if (!trimmed || alreadyExists || saving) return;
     setSaving(true);
-    await onNewArtist({ name: trimmed });
+    setError(null);
+    try {
+      await onNewArtist({ name: trimmed });
+      setName("");
+      setShowForm(false);
+    } catch (err) {
+      setError((err && err.message) || "Erro ao cadastrar artista. Confira se a tabela 'artists' já existe no Supabase.");
+    }
     setSaving(false);
-    setName("");
-    setShowForm(false);
   }
 
   return h("div", null,
@@ -715,7 +721,8 @@ function ArtistsView(props) {
           })),
         h("button", { className: "primary-btn", onClick: save, disabled: !trimmed || alreadyExists || saving }, saving ? "Salvando..." : "Salvar")
       ),
-      alreadyExists && h("div", { className: "hint", style: { marginTop: 6 } }, "Esse artista já está cadastrado.")
+      alreadyExists && h("div", { className: "hint", style: { marginTop: 6 } }, "Esse artista já está cadastrado."),
+      error && h("div", { className: "error-msg", style: { marginTop: 6 } }, error)
     ),
     artists.length === 0
       ? h("div", { className: "empty" }, "Nenhum artista cadastrado ainda. Cadastre pelo botão acima, ou direto ao criar um lick.")
@@ -749,6 +756,7 @@ function LickForm(props) {
   const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [registeringArtist, setRegisteringArtist] = useState(false);
+  const [artistError, setArtistError] = useState(null);
   const [showArtistSuggestions, setShowArtistSuggestions] = useState(false);
 
   const artistList = artists || [];
@@ -762,7 +770,12 @@ function LickForm(props) {
   async function registerArtist() {
     if (!artistTrimmed || artistIsRegistered || !onCreateArtist) return;
     setRegisteringArtist(true);
-    await onCreateArtist({ name: artistTrimmed });
+    setArtistError(null);
+    try {
+      await onCreateArtist({ name: artistTrimmed });
+    } catch (err) {
+      setArtistError((err && err.message) || "Erro ao cadastrar artista. Confira se a tabela 'artists' já existe no Supabase.");
+    }
     setRegisteringArtist(false);
   }
 
@@ -817,6 +830,7 @@ function LickForm(props) {
           onClick: registerArtist, title: artistIsRegistered ? "Esse artista já está cadastrado" : "Cadastrar esse artista"
         }, artistIsRegistered ? "✓ Cadastrado" : (registeringArtist ? "Cadastrando..." : "+ Cadastrar"))
       ),
+      artistError && h("div", { className: "error-msg", style: { marginTop: -8, marginBottom: 8 } }, artistError),
       h("div", { className: "form-row" },
         h("div", null, h("label", null, "Dificuldade"),
           h("select", { value: difficulty, onChange: e => setDifficulty(e.target.value) }, DIFFICULTY.map(d => h("option", { key: d, value: d }, d)))),
