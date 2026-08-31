@@ -56,6 +56,9 @@
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
   .lick-select { margin-bottom: 16px; }
+  .artist-suggestions { position: absolute; top: 100%; left: 0; right: 0; z-index: 10; margin-top: 4px; background: #1F2A24; border: 1px solid #33413A; border-radius: 8px; max-height: 160px; overflow-y: auto; }
+  .artist-suggestion-item { padding: 8px 10px; font-size: 13px; cursor: pointer; }
+  .artist-suggestion-item:hover { background: #24312A; }
   .practice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .panel { background: #1F2A24; border: 1px solid #2A362F; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
   .panel.wide { grid-column: 1 / -1; }
@@ -746,10 +749,15 @@ function LickForm(props) {
   const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [registeringArtist, setRegisteringArtist] = useState(false);
+  const [showArtistSuggestions, setShowArtistSuggestions] = useState(false);
 
   const artistList = artists || [];
   const artistTrimmed = artist.trim();
   const artistIsRegistered = artistTrimmed && artistList.some(a => a.name.toLowerCase() === artistTrimmed.toLowerCase());
+  // conforme digita, filtra os cadastrados que contêm o texto — lista
+  // customizada em vez de <datalist> nativo, que não funciona de forma
+  // confiável no Safari/iOS
+  const artistSuggestions = artistList.filter(a => a.name.toLowerCase().includes(artistTrimmed.toLowerCase()));
 
   async function registerArtist() {
     if (!artistTrimmed || artistIsRegistered || !onCreateArtist) return;
@@ -787,13 +795,28 @@ function LickForm(props) {
       h("input", { value: name, onChange: e => setName(e.target.value), placeholder: "ex: Bend duplo na corda B", autoFocus: true }),
       h("label", null, "Artista / música de origem"),
       h("div", { className: "form-row", style: { gridTemplateColumns: "1fr auto", alignItems: "center" } },
-        h("input", { value: artist, onChange: e => setArtist(e.target.value), placeholder: "ex: John Mayer - Neon", list: "artist-suggestions" }),
+        h("div", { style: { position: "relative" } },
+          h("input", {
+            value: artist,
+            onChange: e => { setArtist(e.target.value); setShowArtistSuggestions(true); },
+            onFocus: () => setShowArtistSuggestions(true),
+            // atraso pra o clique numa sugestão (onMouseDown) registrar antes do input perder o foco
+            onBlur: () => setTimeout(() => setShowArtistSuggestions(false), 150),
+            placeholder: "ex: John Mayer - Neon",
+            autoComplete: "off"
+          }),
+          showArtistSuggestions && artistSuggestions.length > 0 && h("div", { className: "artist-suggestions" },
+            artistSuggestions.map(a => h("div", {
+              key: a.id, className: "artist-suggestion-item",
+              onMouseDown: () => { setArtist(a.name); setShowArtistSuggestions(false); }
+            }, a.name))
+          )
+        ),
         h("button", {
           type: "button", className: "ghost-btn", disabled: !artistTrimmed || artistIsRegistered || registeringArtist,
           onClick: registerArtist, title: artistIsRegistered ? "Esse artista já está cadastrado" : "Cadastrar esse artista"
         }, artistIsRegistered ? "✓ Cadastrado" : (registeringArtist ? "Cadastrando..." : "+ Cadastrar"))
       ),
-      h("datalist", { id: "artist-suggestions" }, artistList.map(a => h("option", { key: a.id, value: a.name }))),
       h("div", { className: "form-row" },
         h("div", null, h("label", null, "Dificuldade"),
           h("select", { value: difficulty, onChange: e => setDifficulty(e.target.value) }, DIFFICULTY.map(d => h("option", { key: d, value: d }, d)))),
