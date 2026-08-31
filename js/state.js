@@ -8,6 +8,8 @@ export const state = {
   items: [],
   templates: [],
   filters: [],
+  transactions: [],
+  financeCategories: [],
 };
 
 const listeners = new Set();
@@ -22,6 +24,8 @@ function emit() {
 let unsubItems = null;
 let unsubTemplates = null;
 let unsubFilters = null;
+let unsubTransactions = null;
+let unsubFinanceCategories = null;
 
 const LS_CURRENT = "op_current_profile";
 const LS_TRUSTED = "op_trusted_profiles";
@@ -111,6 +115,8 @@ export function selectProfile(profileId, { silent } = {}) {
   if (unsubItems) unsubItems();
   if (unsubTemplates) unsubTemplates();
   if (unsubFilters) unsubFilters();
+  if (unsubTransactions) unsubTransactions();
+  if (unsubFinanceCategories) unsubFinanceCategories();
   state.profile = state.profiles.find((p) => p.id === profileId) || state.profile;
   unsubItems = store.subscribeItems(profileId, (items) => {
     state.items = items;
@@ -124,6 +130,14 @@ export function selectProfile(profileId, { silent } = {}) {
     state.filters = filters;
     emit();
   });
+  unsubTransactions = store.subscribeTransactions(profileId, (transactions) => {
+    state.transactions = transactions;
+    emit();
+  });
+  unsubFinanceCategories = store.subscribeFinanceCategories(profileId, (financeCategories) => {
+    state.financeCategories = financeCategories;
+    emit();
+  });
   if (!silent) emit();
 }
 
@@ -132,10 +146,14 @@ export function signOutProfile() {
   if (unsubItems) unsubItems();
   if (unsubTemplates) unsubTemplates();
   if (unsubFilters) unsubFilters();
+  if (unsubTransactions) unsubTransactions();
+  if (unsubFinanceCategories) unsubFinanceCategories();
   state.profile = null;
   state.items = [];
   state.templates = [];
   state.filters = [];
+  state.transactions = [];
+  state.financeCategories = [];
   emit();
 }
 
@@ -155,4 +173,27 @@ export async function removeItem(id) {
 }
 export function getItem(id) {
   return state.items.find((i) => i.id === id) || null;
+}
+
+// ------------------------------------------------------ helpers financeiro
+
+export async function addTransaction(data) {
+  if (!state.profile) return;
+  return store.createTransaction(state.profile.id, data);
+}
+export async function editTransaction(id, patch) {
+  if (!state.profile) return;
+  return store.updateTransaction(state.profile.id, id, patch);
+}
+export async function removeTransaction(id) {
+  if (!state.profile) return;
+  return store.deleteTransaction(state.profile.id, id);
+}
+export async function addFinanceCategory(data) {
+  if (!state.profile) return;
+  return store.createFinanceCategory(state.profile.id, data);
+}
+export async function removeFinanceCategory(id) {
+  if (!state.profile) return;
+  return store.deleteFinanceCategory(state.profile.id, id);
 }

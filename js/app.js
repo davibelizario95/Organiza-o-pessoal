@@ -11,6 +11,7 @@ import { renderFrenteGeneric } from "./views/frenteGeneric.js";
 import { renderTrabalho } from "./views/trabalho.js";
 import { renderAgenda } from "./views/agenda.js";
 import { renderSettings } from "./views/settings.js";
+import { renderFinanceiro } from "./views/financeiro.js";
 import { FRENTES } from "./frentes.js";
 
 const root = document.getElementById("root");
@@ -43,12 +44,13 @@ function refreshChrome() {
 function setupRoutes() {
   registerRoute("hub", renderHub);
   registerRoute("dashboard", renderDashboard);
-  FRENTES.filter((f) => f.kind !== "board").forEach((f) =>
+  FRENTES.filter((f) => f.kind !== "board" && f.key !== "financeiro").forEach((f) =>
     registerRoute(f.key, (ctx) => renderFrenteGeneric(f, ctx))
   );
   registerRoute("trabalho", renderTrabalho);
   registerRoute("agenda", renderAgenda);
   registerRoute("settings", renderSettings);
+  registerRoute("financeiro", renderFinanceiro);
 }
 
 function renderApp() {

@@ -9,6 +9,8 @@ const LS_PROFILES = "op_profiles";
 const lsItemsKey = (p) => `op_items_${p}`;
 const lsTemplatesKey = (p) => `op_templates_${p}`;
 const lsFiltersKey = (p) => `op_filters_${p}`;
+const lsTransactionsKey = (p) => `op_transactions_${p}`;
+const lsFinanceCategoriesKey = (p) => `op_finance_categories_${p}`;
 const LS_CURRENT = "op_current_profile";
 const LS_TRUSTED = "op_trusted_profiles";
 
@@ -375,4 +377,143 @@ export async function deleteFilter(profileId, id) {
   const list = readLs(lsFiltersKey(profileId), []).filter((f) => f.id !== id);
   writeLs(lsFiltersKey(profileId), list);
   notifyLocal(lsFiltersKey(profileId));
+}
+
+// ------------------------------------------------------ FINANCEIRO: lançamentos
+
+export async function listTransactions(profileId) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { collection, getDocs, orderBy, query } = fb.firestore;
+    const q = query(collection(fb.db, "profiles", profileId, "transactions"), orderBy("data", "desc"));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
+  return readLs(lsTransactionsKey(profileId), []);
+}
+
+export function subscribeTransactions(profileId, cb) {
+  if (backendMode === "firebase") {
+    let unsub = () => {};
+    getFirebase().then((fb) => {
+      const { collection, onSnapshot, orderBy, query } = fb.firestore;
+      const q = query(collection(fb.db, "profiles", profileId, "transactions"), orderBy("data", "desc"));
+      unsub = onSnapshot(q, (snap) => {
+        cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      });
+    });
+    return () => unsub();
+  }
+  return subscribeLocal(lsTransactionsKey(profileId), cb);
+}
+
+export async function createTransaction(profileId, data) {
+  const tx = {
+    tipo: "gasto",
+    valor: 0,
+    descricao: "",
+    categoria: "",
+    data: nowIso().slice(0, 10),
+    formaPagamento: null,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    ...data,
+  };
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { collection, addDoc } = fb.firestore;
+    const ref = await addDoc(collection(fb.db, "profiles", profileId, "transactions"), tx);
+    return { id: ref.id, ...tx };
+  }
+  const list = readLs(lsTransactionsKey(profileId), []);
+  const full = { id: uid(), ...tx };
+  list.unshift(full);
+  writeLs(lsTransactionsKey(profileId), list);
+  notifyLocal(lsTransactionsKey(profileId));
+  return full;
+}
+
+export async function updateTransaction(profileId, id, patch) {
+  const withTs = { ...patch, updatedAt: nowIso() };
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { doc, updateDoc } = fb.firestore;
+    await updateDoc(doc(fb.db, "profiles", profileId, "transactions", id), withTs);
+    return;
+  }
+  const list = readLs(lsTransactionsKey(profileId), []);
+  const idx = list.findIndex((t) => t.id === id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...withTs };
+    writeLs(lsTransactionsKey(profileId), list);
+    notifyLocal(lsTransactionsKey(profileId));
+  }
+}
+
+export async function deleteTransaction(profileId, id) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { doc, deleteDoc } = fb.firestore;
+    await deleteDoc(doc(fb.db, "profiles", profileId, "transactions", id));
+    return;
+  }
+  const list = readLs(lsTransactionsKey(profileId), []).filter((t) => t.id !== id);
+  writeLs(lsTransactionsKey(profileId), list);
+  notifyLocal(lsTransactionsKey(profileId));
+}
+
+// ------------------------------------------------ FINANCEIRO: categorias extras
+// Só as categorias CRIADAS pelo usuário — as pré-definidas vivem como
+// constante em financeCategories.js e não passam por aqui.
+
+export async function listFinanceCategories(profileId) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { collection, getDocs } = fb.firestore;
+    const snap = await getDocs(collection(fb.db, "profiles", profileId, "financeCategories"));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
+  return readLs(lsFinanceCategoriesKey(profileId), []);
+}
+
+export function subscribeFinanceCategories(profileId, cb) {
+  if (backendMode === "firebase") {
+    let unsub = () => {};
+    getFirebase().then((fb) => {
+      const { collection, onSnapshot } = fb.firestore;
+      unsub = onSnapshot(collection(fb.db, "profiles", profileId, "financeCategories"), (snap) => {
+        cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      });
+    });
+    return () => unsub();
+  }
+  return subscribeLocal(lsFinanceCategoriesKey(profileId), cb);
+}
+
+export async function createFinanceCategory(profileId, data) {
+  const cat = { createdAt: nowIso(), ...data };
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { collection, addDoc } = fb.firestore;
+    const ref = await addDoc(collection(fb.db, "profiles", profileId, "financeCategories"), cat);
+    return { id: ref.id, ...cat };
+  }
+  const list = readLs(lsFinanceCategoriesKey(profileId), []);
+  const full = { id: uid(), ...cat };
+  list.push(full);
+  writeLs(lsFinanceCategoriesKey(profileId), list);
+  notifyLocal(lsFinanceCategoriesKey(profileId));
+  return full;
+}
+
+export async function deleteFinanceCategory(profileId, id) {
+  if (backendMode === "firebase") {
+    const fb = await getFirebase();
+    const { doc, deleteDoc } = fb.firestore;
+    await deleteDoc(doc(fb.db, "profiles", profileId, "financeCategories", id));
+    return;
+  }
+  const list = readLs(lsFinanceCategoriesKey(profileId), []).filter((c) => c.id !== id);
+  writeLs(lsFinanceCategoriesKey(profileId), list);
+  notifyLocal(lsFinanceCategoriesKey(profileId));
 }
