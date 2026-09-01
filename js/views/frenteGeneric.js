@@ -68,10 +68,10 @@ export function renderFrenteGeneric(frente) {
         <span class="menu-tile-count">${count ? `${count} pendente${count === 1 ? "" : "s"}` : "Nada pendente"}</span>
       `;
       const externalUrl = MENU_EXTERNAL_LINKS[frente.key]?.[cat.toLowerCase()];
-      if (externalUrl) tile.title = "Abre em outra página";
+      if (externalUrl) tile.title = "Abre essa página";
       tile.addEventListener("click", () => {
         if (externalUrl) {
-          window.open(externalUrl, "_blank", "noopener");
+          window.location.href = externalUrl;
           return;
         }
         menuCategory = cat;
